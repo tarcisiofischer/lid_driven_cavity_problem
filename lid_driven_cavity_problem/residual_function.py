@@ -11,6 +11,8 @@ def residual_function(graph):
     ns_x_equation_offset = len(graph) * 1
     ns_y_equation_offset = len(graph) * 2
 
+    dt = graph.dt
+
     # Conservation of Mass
     # u_e * dy - u_w * dy + v_n * dx - v_s * dx
     start = mass_equation_offset * len(graph)
@@ -29,7 +31,6 @@ def residual_function(graph):
     for i, node in range(start, start + len(graph)):
         dx = node.dx
         dy = node.dy
-        dt = graph.dt
         rho = node.rho
         u_P = node.u_P
         u_P_old = node.u_P_old
@@ -69,7 +70,6 @@ def residual_function(graph):
     for i, node in range(start, start + len(graph)):
         dx = node.dx
         dy = node.dy
-        dt = graph.dt
         rho = node.rho
         v_P = node.u_P
         v_P_old = node.u_P_old
