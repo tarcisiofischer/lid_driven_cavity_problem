@@ -1,19 +1,16 @@
-def residual_function(U, V, P, graph):
+def residual_function(X, graph):
     # Notes:
     #
     # Think about using petsc4py's DMDA so that we don't need to worry about
     # the Jacobian matrix.
     #
-    unknowns = 3
-    residual = [None] * len(graph) * unknowns
-    mass_equation_offset = len(graph) * 0
-    ns_x_equation_offset = len(graph) * 1
-    ns_y_equation_offset = len(graph) * 2
-
-    # Staggered grids
+    residual = [None] * len(graph)
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
+    mass_equation_offset = 0
+    ns_x_equation_offset = mass_equation_offset + len(pressure_mesh)
+    ns_y_equation_offset = ns_x_equation_offset + len(ns_x_mesh)
 
     # Knowns (Constants)
     dt = graph.dt
@@ -21,25 +18,41 @@ def residual_function(U, V, P, graph):
     dy = graph.dy
     rho = graph.rho
     mi = graph.mi
+    bc = graph.bc
 
-    for i, pressure_node in range(len(pressure_mesh)):
+    # Extract unknown vectors
+    U = X[0:len(ns_x_mesh)]
+    V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
+    P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
+
+    for i in range(len(pressure_mesh)):
+        j = i // pressure_mesh.nx
+
         # Index conversion
-        i_U_w = i - (i // pressure_mesh.nx) - 1
+        i_U_w = i - j - 1
         i_U_e = i_U_w + 1
         i_V_n = i
-        i_V_s = i - (i // pressure_mesh.nx) * pressure_mesh.nx
+        i_V_s = i_V_n - pressure_mesh.nx
+
+        # Knowns
+        is_left_boundary = i % pressure_mesh.nx == 0
+        is_right_boundary = (i + 1) % pressure_mesh.nx == 0
+        is_bottom_boundary = j % pressure_mesh.ny == 0
+        is_top_boundary = (j + 1) % pressure_mesh.ny == 0
 
         # Unknowns
-        U_w = U[i_U_w]
-        U_e = U[i_U_e]
-        V_n = V[i_V_n]
-        V_s = V[i_V_s]
+        U_w = 0.0 if is_left_boundary else U[i_U_w]
+        U_e = 0.0 if is_right_boundary else U[i_U_e]
+        V_n = 0.0 if is_top_boundary else V[i_V_n]
+        V_s = 0.0 if is_bottom_boundary else V[i_V_s]
 
         # Conservation of Mass
-        ii = mass_equation_offset * len(graph) + i
+        ii = mass_equation_offset + i
         residual[ii] = (U_e * dy - U_w * dy) + (V_n * dx - V_s * dx)
 
-    for i, ns_x_node in range(len(ns_x_mesh)):
+    for i in range(len(ns_x_mesh)):
+        j = i // ns_x_mesh.nx
+
         # Index conversion
         i_U_P = i
         i_U_W = i - 1
@@ -48,32 +61,44 @@ def residual_function(U, V, P, graph):
         i_U_S = i - ns_x_mesh.nx
         i_P_w = i + (i // ns_x_mesh.nx)
         i_P_e = i_P_w + 1
+        i_V_NW = i + j
+        i_V_NE = i_V_NW + 1
+        i_V_SW = i_V_NW - ns_y_mesh.nx
+        i_V_SE = i_V_NE - ns_y_mesh.nx
 
         # Knowns
-        U_P_old = ns_x_node.U_P_old
+        U_P_old = ns_x_mesh.phi_old[i_U_P]
+        is_left_boundary = i % ns_x_mesh.nx == 0
+        is_right_boundary = (i + 1) % ns_x_mesh.nx == 0
+        is_bottom_boundary = j % ns_x_mesh.ny == 0
+        is_top_boundary = (j + 1) % ns_x_mesh.ny == 0
 
         # Unknowns
         U_P = U[i_U_P]
-        U_W = U[i_U_W]
-        U_E = U[i_U_E]
-        U_N = U[i_U_N]
-        U_S = U[i_U_S]
+        U_W = 0.0 if is_left_boundary else U[i_U_W]
+        U_E = 0.0 if is_right_boundary else U[i_U_E]
+        U_N = bc if is_top_boundary else U[i_U_N]
+        U_S = 0.0 if is_bottom_boundary else U[i_U_S]
         P_w = P[i_P_w]
         P_e = P[i_P_e]
+        V_NE = 0.0 if is_top_boundary else V[i_V_NE]
+        V_NW = 0.0 if is_top_boundary else V[i_V_NW]
+        V_SE = 0.0 if is_bottom_boundary else V[i_V_SE]
+        V_SW = 0.0 if is_bottom_boundary else V[i_V_SW]
 
         # Calculated (Interpolated and Secondary Variables)
         dU_e_dx = (U_E - U_P) / dx
         dU_w_dx = (U_P - U_W) / dx
         dU_n_dx = (U_N - U_P) / dy
         dU_s_dx = (U_P - U_S) / dy
-        beta_U_e = ns_x_node.beta_U_e
-        beta_U_w = ns_x_node.beta_U_w
-        beta_V_n = ns_x_node.beta_V_n
-        beta_V_s = ns_x_node.beta_V_s
-        U_e = ns_x_node.U_e
-        U_w = ns_x_node.U_w
-        V_n = ns_x_node.V_n
-        V_s = ns_x_node.V_s
+        beta_U_e = 0.5 if U_P > 0.0 else -0.5
+        beta_U_w = 0.5 if U_P > 0.0 else -0.5
+        beta_V_n = 0.5 if U_P > 0.0 else -0.5
+        beta_V_s = 0.5 if U_P > 0.0 else -0.5
+        U_e = (U_E + U_P) / 2.0
+        U_w = (U_P + U_W) / 2.0
+        V_n = (V_NE + V_NW) / 2.0
+        V_s = (V_SE + V_SW) / 2.0
 
         # Navier Stokes X
         transient_term = (rho * U_P - rho * U_P_old) * (dx * dy / dt)
@@ -89,10 +114,12 @@ def residual_function(U, V, P, graph):
             mi * dU_s_dx * dx
         source_term    = -(P_e - P_w) * dy 
 
-        ii = ns_x_equation_offset * len(graph) + i
-        residual[i] = transient_term + advective_term - difusive_term - source_term
+        ii = ns_x_equation_offset + i
+        residual[ii] = transient_term + advective_term - difusive_term - source_term
 
-    for i, ns_y_node in range(len(ns_y_mesh)):
+    for i in range(len(ns_y_mesh)):
+        j = i // ns_y_mesh.nx
+
         # Index conversion
         i_V_P = i
         i_V_W = i - 1
@@ -101,32 +128,44 @@ def residual_function(U, V, P, graph):
         i_V_S = i - ns_y_mesh.nx
         i_P_n = i + ns_y_mesh.nx
         i_P_s = i
+        i_U_SE = i - j
+        i_U_SW = i_U_SE - 1
+        i_U_NE = i_U_SE + ns_x_mesh.nx
+        i_U_NW = i_U_SW + ns_x_mesh.nx
 
         # Knowns
-        V_P_old = ns_y_node.V_P_old
+        V_P_old = ns_y_mesh.phi_old[i_V_P]
+        is_left_boundary = i % ns_y_mesh.nx == 0
+        is_right_boundary = (i + 1) % ns_y_mesh.nx == 0
+        is_bottom_boundary = j % ns_y_mesh.ny == 0
+        is_top_boundary = (j + 1) % ns_y_mesh.ny == 0
 
         # Unknowns
         V_P = V[i_V_P]
-        V_E = V[i_V_E]
-        V_W = V[i_V_W]
-        V_N = V[i_V_N]
-        V_S = V[i_V_S]
+        V_E = 0.0 if is_right_boundary else V[i_V_E]
+        V_W = 0.0 if is_left_boundary else V[i_V_W]
+        V_N = 0.0 if is_top_boundary else V[i_V_N]
+        V_S = 0.0 if is_bottom_boundary else V[i_V_S]
         P_n = P[i_P_n]
         P_s = P[i_P_s]
+        U_SE = 0.0 if is_right_boundary else U[i_U_SE]
+        U_SW = 0.0 if is_left_boundary else U[i_U_SW]
+        U_NE = 0.0 if is_right_boundary else bc if is_top_boundary else U[i_U_NE]
+        U_NW = 0.0 if is_left_boundary else bc if is_top_boundary else U[i_U_NW]
 
         # Calculated (Interpolated and Secondary Variables)
-        beta_U_e = ns_y_node.beta_U_e
-        beta_U_w = ns_y_node.beta_U_w
-        beta_V_n = ns_y_node.beta_V_n
-        beta_V_s = ns_y_node.beta_V_s
         dV_e_dx = (V_E - V_P) / dx
         dV_w_dx = (V_P - V_W) / dx
         dV_n_dx = (V_N - V_P) / dy
         dV_s_dx = (V_P - V_S) / dy
-        U_e = ns_y_node.U_e
-        U_w = ns_y_node.U_w
-        V_n = ns_y_node.V_n
-        V_s = ns_y_node.V_s
+        beta_U_e = 0.5 if V_P > 0.0 else -0.5
+        beta_U_w = 0.5 if V_P > 0.0 else -0.5
+        beta_V_n = 0.5 if V_P > 0.0 else -0.5
+        beta_V_s = 0.5 if V_P > 0.0 else -0.5
+        U_e = (U_NE + U_SE) / 2.0
+        U_w = (U_NW + U_SW) / 2.0
+        V_n = (V_P + V_N) / 2.0
+        V_s = (V_S + V_P) / 2.0
 
         # Navier Stokes Y
         transient_term = (rho * V_P - rho * V_P_old) * (dx * dy / dt)
@@ -142,7 +181,7 @@ def residual_function(U, V, P, graph):
             mi * dV_s_dx * dx
         source_term    = -(P_n - P_s) * dy 
 
-        ii = ns_y_equation_offset * len(graph) + i
+        ii = ns_y_equation_offset + i
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     # Sanity check

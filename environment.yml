@@ -3,3 +3,6 @@ name: lid_driven_cavity_problem
 dependencies:
     - python==3.5.3
     - pytest
+    - scipy
+    - matplotlib
+

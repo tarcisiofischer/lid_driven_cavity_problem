@@ -1,39 +1,46 @@
-class Node(object):
+class Mesh2d(object):
     __slots__ = (
-        'dx',
-        'dy',
-        'u_e',
-        'u_w',
-        'v_n',
-        'v_s',
-        'rho',
-        'u_P',
-        'u_P_old',
-        'u_E',
-        'u_W',
-        'u_N',
-        'u_S',
-        'mi',
-        'beta_u_e',
-        'beta_u_w',
-        'beta_v_n',
-        'beta_v_s',
-        'P_e',
-        'P_w',
-        'v_P',
-        'v_P_old',
-        'v_E',
-        'v_W',
-        'v_N',
-        'v_S',
-        'dv_e_dx',
-        'dv_w_dx',
-        'dv_n_dx',
-        'dv_s_dx',
+        'nx',
+        'ny',
+        'phi',
+        'phi_old',
     )
+
+    def __init__(self, nx, ny):
+        self.nx = nx
+        self.ny = ny
+        self.phi = [0] * (self.nx * self.ny)
+        self.phi_old = [0] * (self.nx * self.ny)
+
+
+    def __len__(self):
+        return self.nx * self.ny
+
 
 class Graph(object):
     __slots__ = (
         'dt',
-        'nodes',
+        'dx',
+        'dy',
+        'rho',
+        'mi',
+        'pressure_mesh',
+        'ns_x_mesh',
+        'ns_y_mesh',
+        'bc',
     )
+
+    def __init__(self, size_x, size_y, nx, ny, dt, rho, mi, bc):
+        self.dt = dt
+        self.dx = size_x / nx
+        self.dy = size_y / ny
+        self.rho = rho
+        self.mi = mi
+        self.bc = bc
+
+        self.pressure_mesh = Mesh2d(nx, ny)
+        self.ns_x_mesh = Mesh2d(nx - 1, ny)
+        self.ns_y_mesh = Mesh2d(nx, ny - 1)
+
+    def __len__(self):
+        return len(self.pressure_mesh) + len(self.ns_x_mesh) + len(self.ns_y_mesh)
