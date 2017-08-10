@@ -92,9 +92,9 @@ def residual_function(X, graph):
         dU_n_dx = (U_N - U_P) / dy
         dU_s_dx = (U_P - U_S) / dy
         beta_U_e = 0.5 if U_P > 0.0 else -0.5
-        beta_U_w = 0.5 if U_P > 0.0 else -0.5
+        beta_U_w = 0.5 if U_W > 0.0 else -0.5
         beta_V_n = 0.5 if U_P > 0.0 else -0.5
-        beta_V_s = 0.5 if U_P > 0.0 else -0.5
+        beta_V_s = 0.5 if U_S > 0.0 else -0.5
         U_e = (U_E + U_P) / 2.0
         U_w = (U_P + U_W) / 2.0
         V_n = (V_NE + V_NW) / 2.0
@@ -159,9 +159,9 @@ def residual_function(X, graph):
         dV_n_dx = (V_N - V_P) / dy
         dV_s_dx = (V_P - V_S) / dy
         beta_U_e = 0.5 if V_P > 0.0 else -0.5
-        beta_U_w = 0.5 if V_P > 0.0 else -0.5
+        beta_U_w = 0.5 if V_W > 0.0 else -0.5
         beta_V_n = 0.5 if V_P > 0.0 else -0.5
-        beta_V_s = 0.5 if V_P > 0.0 else -0.5
+        beta_V_s = 0.5 if V_S > 0.0 else -0.5
         U_e = (U_NE + U_SE) / 2.0
         U_w = (U_NW + U_SW) / 2.0
         V_n = (V_P + V_N) / 2.0
