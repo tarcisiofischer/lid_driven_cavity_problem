@@ -1,21 +1,22 @@
 from lid_driven_cavity_problem.staggered_grid import Graph
-from lid_driven_cavity_problem.newton_solver import solve
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def test_run_solver():
-    size_x = 0.1
-    size_y = 0.1
+    size_x = 1.0
+    size_y = 1.0
     nx = 15
     ny = 15
     dt = 1e-1
-    rho = 0.1
-    mi = 0.1
-    final_time = 0.5
-    bc = 200
-    graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, bc)
+    rho = 1.0
+    final_time = 0.1
+    mi = 1.0
+    Re = 100
+    U_bc = (mi * Re) / (rho * size_x)
+
+    graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
     result = run_simulation(graph, final_time)
     U = np.array(result.ns_x_mesh.phi)
     V = np.array(result.ns_y_mesh.phi)
