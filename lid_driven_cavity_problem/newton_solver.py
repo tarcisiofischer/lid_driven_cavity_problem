@@ -1,8 +1,14 @@
 from lid_driven_cavity_problem.residual_function import residual_function
 from copy import deepcopy
 from scipy.optimize.minpack import fsolve
+from scipy.optimize.slsqp import approx_jacobian
 
+PLOT_JACOBIAN = False
+SHOW_SOLVER_DETAILS = True
+IGNORE_DIVERGED = False
 
+class SolverDivergedException(RuntimeError):
+    pass
 
 def solve(graph):
     pressure_mesh = graph.pressure_mesh
@@ -12,20 +18,32 @@ def solve(graph):
     U = ns_x_mesh.phi
     V = ns_x_mesh.phi
     P = pressure_mesh.phi
-#     print(U)
-#     print(V)
-#     print(P)
 
     X = U + V + P
-    X_ = fsolve(residual_function, X, args=(graph,))
-#     print("Residual: %s" % (X_,))
 
+    if PLOT_JACOBIAN:
+        import matplotlib.pyplot as plt
+        J = approx_jacobian(X, residual_function, 1e-4, graph)
+        J = J.astype(dtype='bool')
+        plt.imshow(J)
+        plt.show()
+
+    X_, infodict, ier, mesg = fsolve(residual_function, X, args=(graph,), full_output=True)
+    if SHOW_SOLVER_DETAILS:
+        print("Number of function calls=%s" % (infodict['nfev'],))
+        if ier == 1:
+            print("Converged")
+        else:
+            print("Diverged")
+            print(mesg)
+
+    if not IGNORE_DIVERGED:
+        if not ier == 1:
+            raise SolverDivergedException()
+    
     U = X_[0:len(ns_x_mesh)]
     V = X_[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
     P = X_[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
-#     print(U)
-#     print(V)
-#     print(P)
  
     new_graph = deepcopy(graph)
     for i in range(len(new_graph.ns_x_mesh)):
