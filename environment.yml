@@ -1,8 +1,10 @@
 name: lid_driven_cavity_problem
-
+channels:
+  - esss
+  - defaults
 dependencies:
-    - python==3.5.3
-    - pytest
-    - scipy
-    - matplotlib
-
+  - python==3.5.3
+  - pytest
+  - scipy
+  - matplotlib
+  - petsc4py
