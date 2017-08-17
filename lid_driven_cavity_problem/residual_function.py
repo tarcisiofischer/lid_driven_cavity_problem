@@ -1,12 +1,11 @@
-from lid_driven_cavity_problem._refactoring_options import SOLVE_WITH_CLOSE_UVP
+from lid_driven_cavity_problem.options import USE_UPWIND, SOLVE_WITH_CLOSE_UVP
+
+
 def residual_function(X, graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
-    if SOLVE_WITH_CLOSE_UVP:
-        residual = [None] * len(graph)
-    else:
-        residual = [None] * (len(pressure_mesh) * 3)
+    residual = [None] * (len(X))
     mass_equation_offset = 0
     ns_x_equation_offset = mass_equation_offset + len(pressure_mesh)
     ns_y_equation_offset = ns_x_equation_offset + len(ns_x_mesh)
@@ -212,10 +211,12 @@ def residual_function(X, graph):
     if SOLVE_WITH_CLOSE_UVP:
         pass
     else:
-        # TODO: Avoid empty equations
-        for ii in range(len(residual)):
-            if residual[ii] == None:
-                residual[ii] = 0.0
+        for i in range(len(ns_x_mesh), len(U)):
+            ii = 3 * i + 1
+            residual[ii] = U[i] - 1.0
+        for i in range(len(ns_y_mesh), len(V)):
+            ii = 3 * i + 2
+            residual[ii] = V[i] - 1.0
 
     # Sanity check
     assert None not in residual, 'Missing equation in residual function'
