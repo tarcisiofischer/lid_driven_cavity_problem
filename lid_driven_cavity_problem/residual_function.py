@@ -1,13 +1,9 @@
 def residual_function(X, graph):
-    # Notes:
-    #
-    # Think about using petsc4py's DMDA so that we don't need to worry about
-    # the Jacobian matrix.
-    #
-    residual = [None] * len(graph)
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
+#     residual = [None] * (len(pressure_mesh) * 3)
+    residual = [None] * len(graph)
     mass_equation_offset = 0
     ns_x_equation_offset = mass_equation_offset + len(pressure_mesh)
     ns_y_equation_offset = ns_x_equation_offset + len(ns_x_mesh)
@@ -24,6 +20,9 @@ def residual_function(X, graph):
     U = X[0:len(ns_x_mesh)]
     V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
     P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
+#     U = X[0::3]
+#     V = X[1::3]
+#     P = X[2::3]
 
     for i in range(len(pressure_mesh)):
         j = i // pressure_mesh.nx
@@ -47,6 +46,7 @@ def residual_function(X, graph):
         V_s = 0.0 if is_bottom_boundary else V[i_V_s]
 
         # Conservation of Mass
+#         ii = 3 * i
         ii = mass_equation_offset + i
         residual[ii] = (U_e * dy - U_w * dy) + (V_n * dx - V_s * dx)
 
@@ -114,6 +114,7 @@ def residual_function(X, graph):
             mi * dU_s_dx * dx
         source_term    = -(P_e - P_w) * dy 
 
+#         ii = 3 * i + 1
         ii = ns_x_equation_offset + i
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
@@ -181,10 +182,14 @@ def residual_function(X, graph):
             mi * dV_s_dx * dx
         source_term    = -(P_n - P_s) * dy 
 
+#         ii = 3 * i + 2
         ii = ns_y_equation_offset + i
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     # Sanity check
+    for ii in range(len(residual)):
+        if residual[ii] == None:
+            residual[ii] = 0.0
     assert None not in residual, 'Missing equation in residual function'
 
     return residual

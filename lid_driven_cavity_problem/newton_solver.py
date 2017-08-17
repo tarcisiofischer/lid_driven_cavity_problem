@@ -2,6 +2,7 @@ from lid_driven_cavity_problem.residual_function import residual_function
 from copy import deepcopy
 from scipy.optimize.minpack import fsolve
 from scipy.optimize.slsqp import approx_jacobian
+import numpy as np
 
 PLOT_JACOBIAN = False
 SHOW_SOLVER_DETAILS = True
@@ -18,6 +19,11 @@ def solve(graph):
     U = ns_x_mesh.phi
     V = ns_x_mesh.phi
     P = pressure_mesh.phi
+
+#     X = np.zeros(shape=(3 * len(P),))
+#     X[0::3] = np.r_[U, np.zeros(shape=(len(P) - len(U),))]
+#     X[1::3] = np.r_[V, np.zeros(shape=(len(P) - len(V),))]
+#     X[2::3] = P
 
     X = U + V + P
 
@@ -44,6 +50,10 @@ def solve(graph):
     U = X_[0:len(ns_x_mesh)]
     V = X_[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
     P = X_[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
+
+#     U = X_[0::3][0:len(ns_x_mesh)]
+#     V = X_[1::3][0:len(ns_y_mesh)]
+#     P = X_[2::3][0:len(pressure_mesh)]
  
     new_graph = deepcopy(graph)
     for i in range(len(new_graph.ns_x_mesh)):
