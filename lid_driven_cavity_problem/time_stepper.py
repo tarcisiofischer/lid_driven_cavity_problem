@@ -9,6 +9,9 @@ MINIMUM_DT = 1e-4
 def run_simulation(graph, final_time):
     t = 0.0
     while t <= final_time:
+        if graph.dt <= MINIMUM_DT:
+            raise RuntimeError("Timestep has reached a too low value. Giving up.")
+
         if SHOW_TIMESTEPPER_LOGS:
             print("time: %s/%s" % (t, final_time))
         try:
@@ -18,9 +21,6 @@ def run_simulation(graph, final_time):
             if SHOW_TIMESTEPPER_LOGS:
                 print("Simulation diverged. Will try with dt=%s" % (graph.dt,))
             continue
-
-        if graph.dt <= MINIMUM_DT:
-            raise RuntimeError("Timestep has reached a too low value. Giving up.")
 
         # Copy old solution to new solution
         for mesh_name in ['pressure_mesh', 'ns_x_mesh', 'ns_y_mesh']:

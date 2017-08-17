@@ -9,8 +9,10 @@ class Mesh2d(object):
     def __init__(self, nx, ny):
         self.nx = nx
         self.ny = ny
-        self.phi = [0] * (self.nx * self.ny)
-        self.phi_old = [0] * (self.nx * self.ny)
+
+        # TODO: Get initial guesses from somewhere
+        self.phi = [1.0] * (self.nx * self.ny)
+        self.phi_old = [1.0] * (self.nx * self.ny)
 
 
     def __len__(self):

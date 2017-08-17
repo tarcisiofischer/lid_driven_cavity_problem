@@ -13,7 +13,7 @@ def test_run_solver():
     
     if LOAD_RESULTS:
         U = np.loadtxt('U.txt')
-        V = np.loadtxt('U.txt')
+        V = np.loadtxt('V.txt')
     else:
         size_x = 1.0
         size_y = 1.0
