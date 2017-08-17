@@ -6,7 +6,10 @@ from lid_driven_cavity_problem.newton_solver import SolverDivergedException
 SHOW_TIMESTEPPER_LOGS = True
 MINIMUM_DT = 1e-4
 
-def run_simulation(graph, final_time):
+def run_simulation(graph, final_time, solver=None):
+    if solver is None:
+        solver = newton_solver.solve
+    
     t = 0.0
     while t <= final_time:
         if graph.dt <= MINIMUM_DT:
@@ -15,7 +18,7 @@ def run_simulation(graph, final_time):
         if SHOW_TIMESTEPPER_LOGS:
             print("time: %s/%s" % (t, final_time))
         try:
-            new_graph = newton_solver.solve(graph)
+            new_graph = solver(graph)
         except SolverDivergedException:
             graph.dt /= 2.0
             if SHOW_TIMESTEPPER_LOGS:
