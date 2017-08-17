@@ -1,1 +1,2 @@
 SOLVE_WITH_CLOSE_UVP = False
+USE_UPWIND = True
