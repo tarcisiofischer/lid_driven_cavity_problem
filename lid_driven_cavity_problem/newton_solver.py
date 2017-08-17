@@ -178,7 +178,7 @@ def solve_using_petsc(graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
-    X = _create_X(U=ns_x_mesh.phi, V=ns_x_mesh.phi, P=pressure_mesh.phi)
+    X = _create_X(ns_x_mesh.phi, ns_y_mesh.phi, pressure_mesh.phi, graph)
 
 #     if PLOT_JACOBIAN:
 #         _plot_jacobian(graph, X)
