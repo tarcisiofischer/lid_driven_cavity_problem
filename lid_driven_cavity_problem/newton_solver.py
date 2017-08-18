@@ -4,24 +4,30 @@ from scipy.optimize.minpack import fsolve
 from scipy.optimize.slsqp import approx_jacobian
 import numpy as np
 from lid_driven_cavity_problem.options import SOLVE_WITH_CLOSE_UVP,\
-    FULL_JACOBIAN
+    FULL_JACOBIAN, PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
 
-PLOT_JACOBIAN = False
-SHOW_SOLVER_DETAILS = True
-IGNORE_DIVERGED = False
 
 class SolverDivergedException(RuntimeError):
     pass
 
 
-def _create_X(U, V, P):
+def _create_X(U, V, P, graph):
     if SOLVE_WITH_CLOSE_UVP:
         X = U + V + P
     else:
         X = np.zeros(shape=(3 * len(P),))
-        X[0::3] = np.r_[U, np.ones(shape=(len(P) - len(U),))]
-        X[1::3] = np.r_[V, np.ones(shape=(len(P) - len(V),))]
-        X[2::3] = P
+        X[0::3] = P
+
+        extended_U = np.ones(shape=(len(P),))
+        nx = graph.ns_x_mesh.nx
+        ny = graph.ns_x_mesh.ny
+        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+        extended_U[U_idxs] = U
+        X[1::3] = extended_U
+
+        extended_V = np.r_[V, np.ones(shape=(len(P) - len(V),))]
+        X[2::3] = extended_V
+
     return X
 
 
@@ -35,9 +41,15 @@ def _recover_X(X, graph):
         V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
         P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
     else:
-        U = X[0::3][0:len(ns_x_mesh)]
-        V = X[1::3][0:len(ns_y_mesh)]
-        P = X[2::3][0:len(pressure_mesh)]
+        P = X[0::3][0:len(pressure_mesh)]
+
+        extended_U = X[1::3]
+        nx = graph.ns_x_mesh.nx
+        ny = graph.ns_x_mesh.ny
+        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+        U = extended_U[U_idxs]
+
+        V = X[2::3][0:len(ns_y_mesh)]
     return U, V, P
 
 
@@ -63,7 +75,7 @@ def _calculate_jacobian_mask(N, graph):
             fake_U = [u_sign * 1e-2 * (i + 1) ** 2 for i in range(len(ns_x_mesh.phi))]
             fake_V = [v_sign * 1e-2 * (i + 1) ** 2 for i in range(len(ns_y_mesh.phi))]
             fake_P = [1e3 * (i + 1) ** 2 for i in range(len(pressure_mesh.phi))]
-            fake_X = _create_X(fake_U, fake_V, fake_P)
+            fake_X = _create_X(fake_U, fake_V, fake_P, graph)
             current_j_structure = approx_jacobian(fake_X, residual_function, 1e-4, graph).astype(dtype='bool')
             j_structure = np.bitwise_or(j_structure, current_j_structure)
     
@@ -72,10 +84,37 @@ def _calculate_jacobian_mask(N, graph):
 
 
 def _plot_jacobian(graph, X):
+    PLOT_LINES_ON_VARIABLES = False
+    PLOT_LINES_ON_ELEMENTS = True
+#     PLOT_ONLY = 'U'
+#     PLOT_ONLY = 'V'
+#     PLOT_ONLY = 'P'
+    PLOT_ONLY = None
+    
     import matplotlib.pyplot as plt
     J = approx_jacobian(X, residual_function, 1e-4, graph)
     J = J.astype(dtype='bool')
-    plt.imshow(J)
+    if PLOT_ONLY == 'U':
+        J = J[0::3,:]
+    if PLOT_ONLY == 'V':
+        J = J[1::3,:]
+    if PLOT_ONLY == 'P':
+        J = J[2::3,:]
+    if PLOT_ONLY is not None:
+        J = J[:,0::3] + J[:,1::3] + J[:,2::3]
+    plt.imshow(J, aspect='equal', interpolation='none')
+    ax = plt.gca()
+
+    if PLOT_LINES_ON_VARIABLES:
+        ax.set_xticks(np.arange(-.5, len(J), 1), minor=True)
+        ax.set_yticks(np.arange(-.5, len(J), 1), minor=True)
+        ax.grid(which='minor', color='w', linestyle='-', linewidth=1)
+
+    if PLOT_LINES_ON_ELEMENTS:
+        ax.set_xticks(np.arange(-.5, len(J), 3), minor=False)
+        ax.set_yticks(np.arange(-.5, len(J), 3), minor=False)
+        ax.grid(color='r', linestyle='-', linewidth=2)
+
     plt.show()
 
 
@@ -87,7 +126,7 @@ def solve(graph):
     U = ns_x_mesh.phi
     V = ns_x_mesh.phi
     P = pressure_mesh.phi
-    X = _create_X(U, V, P)
+    X = _create_X(U, V, P, graph)
 
     if PLOT_JACOBIAN:
         _plot_jacobian(graph, X)
@@ -180,8 +219,8 @@ def solve_using_petsc(graph):
     ns_y_mesh = graph.ns_y_mesh
     X = _create_X(ns_x_mesh.phi, ns_y_mesh.phi, pressure_mesh.phi, graph)
 
-#     if PLOT_JACOBIAN:
-#         _plot_jacobian(graph, X)
+    if PLOT_JACOBIAN:
+        _plot_jacobian(graph, X)
 
     # Creates the Jacobian matrix structure.
     COMM = PETSc.COMM_WORLD

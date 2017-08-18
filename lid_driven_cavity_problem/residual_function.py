@@ -24,9 +24,16 @@ def residual_function(X, graph):
         V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
         P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
     else:
-        U = X[0::3]
-        V = X[1::3]
-        P = X[2::3]
+        import numpy as np
+        P = X[0::3]
+
+        extended_U = X[1::3]
+        nx = graph.ns_x_mesh.nx
+        ny = graph.ns_x_mesh.ny
+        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+        U = extended_U[U_idxs]
+
+        V = X[2::3][0:len(ns_y_mesh)]
 
     for i in range(len(pressure_mesh)):
         j = i // pressure_mesh.nx
@@ -129,7 +136,8 @@ def residual_function(X, graph):
         if SOLVE_WITH_CLOSE_UVP:
             ii = ns_x_equation_offset + i
         else:
-            ii = 3 * i + 1
+            U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+            ii = 3 * U_idxs[i] + 1
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     for i in range(len(ns_y_mesh)):
@@ -211,12 +219,9 @@ def residual_function(X, graph):
     if SOLVE_WITH_CLOSE_UVP:
         pass
     else:
-        for i in range(len(ns_x_mesh), len(U)):
-            ii = 3 * i + 1
-            residual[ii] = U[i] - 1.0
-        for i in range(len(ns_y_mesh), len(V)):
-            ii = 3 * i + 2
-            residual[ii] = V[i] - 1.0
+        for ii in range(len(X)):
+            if residual[ii] is None:
+                residual[ii] = X[ii]
 
     # Sanity check
     assert None not in residual, 'Missing equation in residual function'
