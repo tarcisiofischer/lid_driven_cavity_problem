@@ -83,7 +83,7 @@ def solve(graph):
     N = len(X)
     J = PETSc.Mat().createAIJ(N, comm=COMM)
     J.setPreallocationNNZ(N)
-    j_structure = _calculate_jacobian_mask(N, graph)
+    j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
     for i, j in zip(*np.nonzero(j_structure)):
         J.setValue(i, j, 1.0)
     J.setUp()
