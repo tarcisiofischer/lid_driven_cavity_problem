@@ -66,6 +66,11 @@ def _calculate_jacobian_mask(nx, ny, dof):
         if i + nx - 1 < n_vars:
             j_structure[i, i + nx - 1] = 1.0
 
-    j_structure = np.kron(j_structure, np.ones((3, 3)))
+    j_structure = np.kron(j_structure, np.ones((dof, dof)))
     __j_structure_cache = j_structure
     return j_structure
+
+
+def _reset_jacobian_mask_cache():
+    global __j_structure_cache
+    __j_structure_cache = None
