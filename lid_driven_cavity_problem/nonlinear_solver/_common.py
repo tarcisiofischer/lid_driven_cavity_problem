@@ -39,12 +39,7 @@ def _recover_X(X, graph):
     return U, V, P
 
 
-__j_structure_cache = None
 def _calculate_jacobian_mask(nx, ny, dof):
-    global __j_structure_cache
-    if __j_structure_cache is not None:
-        return __j_structure_cache
-
     n_equations = n_vars = nx * ny
 
     j_structure = np.zeros((n_equations, n_vars), dtype=bool)
@@ -67,10 +62,4 @@ def _calculate_jacobian_mask(nx, ny, dof):
             j_structure[i, i + nx - 1] = 1.0
 
     j_structure = np.kron(j_structure, np.ones((dof, dof)))
-    __j_structure_cache = j_structure
     return j_structure
-
-
-def _reset_jacobian_mask_cache():
-    global __j_structure_cache
-    __j_structure_cache = None

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from lid_driven_cavity_problem.nonlinear_solver._common import _calculate_jacobian_mask, _reset_jacobian_mask_cache
+from lid_driven_cavity_problem.nonlinear_solver._common import _calculate_jacobian_mask
 import numpy as np
 
 
@@ -20,9 +20,6 @@ GENERATE = False
 )
 def test_calculate_jacobian_mask(nx, ny, dof):
     expected_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_calculate_jacobian_mask')
-
-    # TODO: Better cache handling
-    _reset_jacobian_mask_cache()
 
     mask = _calculate_jacobian_mask(nx, ny, dof)
     expected_mask_filename = os.path.join(expected_path, 'J_%s_%s_%s.txt' % (nx, ny, dof))
