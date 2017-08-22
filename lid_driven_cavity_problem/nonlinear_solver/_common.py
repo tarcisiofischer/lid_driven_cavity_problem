@@ -40,26 +40,21 @@ def _recover_X(X, graph):
 
 
 def _calculate_jacobian_mask(nx, ny, dof):
-    n_equations = n_vars = nx * ny
+    from scipy.sparse import diags, kron
 
-    j_structure = np.zeros((n_equations, n_vars), dtype=bool)
-    for i in range(n_equations):
-        j_structure[i, i] = 1.0
+    N = nx * ny
 
-        if i - 1 >= 0:
-            j_structure[i, i - 1] = 1.0
-        if i + 1 < n_vars:
-            j_structure[i, i + 1] = 1.0
+    j_structure = diags(
+        np.ones(shape=(7,)),
+        [-nx + 1, -nx, -1, 0, 1, +nx, +nx - 1],
+        shape=(N, N),
+        format='coo',
+    )
 
-        if i - nx >= 0:
-            j_structure[i, i - nx] = 1.0
-        if i + nx < n_vars:
-            j_structure[i, i + nx] = 1.0
+    j_structure = kron(
+        j_structure,
+        np.ones(shape=(dof, dof)),
+        format='coo',
+    )
 
-        if i - nx + 1 >= 0:
-            j_structure[i, i - nx + 1] = 1.0
-        if i + nx - 1 < n_vars:
-            j_structure[i, i + nx - 1] = 1.0
-
-    j_structure = np.kron(j_structure, np.ones((dof, dof)))
     return j_structure
