@@ -89,8 +89,26 @@ class _PetscSolverWrapper(object):
         if self._petsc_jacobian is None:
             # Creates the Jacobian matrix structure.
             self._petsc_jacobian = PETSc.Mat().createAIJ(N, comm=COMM)
-            self._petsc_jacobian.setPreallocationNNZ(N)
             j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
+
+            contiguous_malloc_size = j_structure.nnz
+            logger.info("Trying to allocate full jacobian with nnz=%s" % (contiguous_malloc_size,))
+            while True:
+                if contiguous_malloc_size <= 1:
+                    raise RuntimeError("Could not allocate Jacobian Matrix")
+
+                try:
+                    self._petsc_jacobian.setPreallocationNNZ(contiguous_malloc_size)
+                    logger.info("Jacobian allocation success!")
+                    break
+                except RuntimeError:
+                    # Cannot allocate fully contiguous Jacobian.
+                    # Will try to allocate half the size. The rest will be allocated with malloc
+                    # later (On each setValue)
+                    #
+                    contiguous_malloc_size //= 2
+                    logger.info("Too big malloc. Will retry with nnz=%s" % (contiguous_malloc_size,))
+
             for i, j in zip(*np.nonzero(j_structure)):
                 self._petsc_jacobian.setValue(i, j, 1.0)
             self._petsc_jacobian.setUp()
