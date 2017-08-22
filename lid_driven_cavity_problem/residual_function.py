@@ -1,6 +1,3 @@
-from lid_driven_cavity_problem.options import USE_UPWIND
-
-
 def residual_function(X, graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
@@ -100,16 +97,10 @@ def residual_function(X, graph):
         U_w = (U_P + U_W) / 2.0
         V_n = (V_NE + V_NW) / 2.0
         V_s = (V_SE + V_SW) / 2.0
-        if USE_UPWIND:
-            beta_U_e = 0.5 if U_e > 0.0 else -0.5
-            beta_U_w = 0.5 if U_w > 0.0 else -0.5
-            beta_V_n = 0.5 if V_n > 0.0 else -0.5
-            beta_V_s = 0.5 if V_s > 0.0 else -0.5
-        else:
-            beta_U_e = 0.0
-            beta_U_w = 0.0
-            beta_V_n = 0.0
-            beta_V_s = 0.0
+        beta_U_e = 0.5 if U_e > 0.0 else -0.5
+        beta_U_w = 0.5 if U_w > 0.0 else -0.5
+        beta_V_n = 0.5 if V_n > 0.0 else -0.5
+        beta_V_s = 0.5 if V_s > 0.0 else -0.5
 
         # Navier Stokes X
         transient_term = (rho * U_P - rho * U_P_old) * (dx * dy / dt)
@@ -174,16 +165,10 @@ def residual_function(X, graph):
         U_w = (U_NW + U_SW) / 2.0
         V_n = (V_P + V_N) / 2.0
         V_s = (V_S + V_P) / 2.0
-        if USE_UPWIND:
-            beta_U_e = 0.5 if U_e > 0.0 else -0.5
-            beta_U_w = 0.5 if U_w > 0.0 else -0.5
-            beta_V_n = 0.5 if V_n > 0.0 else -0.5
-            beta_V_s = 0.5 if V_s > 0.0 else -0.5
-        else:
-            beta_U_e = 0.0
-            beta_U_w = 0.0
-            beta_V_n = 0.0
-            beta_V_s = 0.0
+        beta_U_e = 0.5 if U_e > 0.0 else -0.5
+        beta_U_w = 0.5 if U_w > 0.0 else -0.5
+        beta_V_n = 0.5 if V_n > 0.0 else -0.5
+        beta_V_s = 0.5 if V_s > 0.0 else -0.5
 
         # Navier Stokes Y
         transient_term = (rho * V_P - rho * V_P_old) * (dx * dy / dt)
