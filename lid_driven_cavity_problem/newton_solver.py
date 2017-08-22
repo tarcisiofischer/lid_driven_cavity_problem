@@ -1,11 +1,17 @@
-from lid_driven_cavity_problem.residual_function import residual_function
 from copy import deepcopy
+import logging
+
+from petsc4py import PETSc
 from scipy.optimize.minpack import fsolve
 from scipy.optimize.slsqp import approx_jacobian
-import numpy as np
-from lid_driven_cavity_problem.options import SOLVE_WITH_CLOSE_UVP,\
-    FULL_JACOBIAN, PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
 
+from lid_driven_cavity_problem.options import SOLVE_WITH_CLOSE_UVP, \
+    FULL_JACOBIAN, PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
+from lid_driven_cavity_problem.residual_function import residual_function
+import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 class SolverDivergedException(RuntimeError):
     pass
@@ -56,7 +62,7 @@ def _recover_X(X, graph):
 __j_structure_cache = None
 def _calculate_jacobian_mask(N, graph):
     COMPARE_JACOBIAN_AND_SHOW = False
-    
+
     global __j_structure_cache
     if __j_structure_cache is not None:
         return __j_structure_cache
@@ -64,7 +70,7 @@ def _calculate_jacobian_mask(N, graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
-    
+
     # Must have values in diagonal because of ILU preconditioner
     j_structure__new = np.zeros((N // 3, N // 3), dtype=bool)
 
@@ -83,7 +89,7 @@ def _calculate_jacobian_mask(N, graph):
         if i + pressure_mesh.nx - 1 < N // 3:
             j_structure__new[i, i + pressure_mesh.nx - 1] = 1.0
 
-    j_structure__new = np.kron(j_structure__new, np.ones((3,3)))
+    j_structure__new = np.kron(j_structure__new, np.ones((3, 3)))
 
     if COMPARE_JACOBIAN_AND_SHOW:
         j_structure = np.zeros((N, N), dtype=bool)
@@ -96,7 +102,7 @@ def _calculate_jacobian_mask(N, graph):
                 fake_X = _create_X(fake_U, fake_V, fake_P, graph)
                 current_j_structure = approx_jacobian(fake_X, residual_function, 1e-4, graph).astype(dtype='bool')
                 j_structure = np.bitwise_or(j_structure, current_j_structure)
-        
+
         cmp = j_structure + j_structure__new
         import matplotlib.pyplot as plt
         plt.imshow(cmp, aspect='equal', interpolation='none')
@@ -115,18 +121,18 @@ def _plot_jacobian(graph, X):
 #     PLOT_ONLY = 'V'
 #     PLOT_ONLY = 'P'
     PLOT_ONLY = None
-    
+
     import matplotlib.pyplot as plt
     J = approx_jacobian(X, residual_function, 1e-4, graph)
     J = J.astype(dtype='bool')
     if PLOT_ONLY == 'U':
-        J = J[0::3,:]
+        J = J[0::3, :]
     if PLOT_ONLY == 'V':
-        J = J[1::3,:]
+        J = J[1::3, :]
     if PLOT_ONLY == 'P':
-        J = J[2::3,:]
+        J = J[2::3, :]
     if PLOT_ONLY is not None:
-        J = J[:,0::3] + J[:,1::3] + J[:,2::3]
+        J = J[:, 0::3] + J[:, 1::3] + J[:, 2::3]
     plt.imshow(J, aspect='equal', interpolation='none')
     ax = plt.gca()
 
@@ -143,7 +149,7 @@ def _plot_jacobian(graph, X):
     plt.show()
 
 
-def solve(graph):
+def solve_using_scipy(graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
@@ -158,19 +164,19 @@ def solve(graph):
 
     X_, infodict, ier, mesg = fsolve(residual_function, X, args=(graph,), full_output=True)
     if SHOW_SOLVER_DETAILS:
-        print("Number of function calls=%s" % (infodict['nfev'],))
+        logger.info("Number of function calls=%s" % (infodict['nfev'],))
         if ier == 1:
-            print("Converged")
+            logger.info("Converged")
         else:
-            print("Diverged")
-            print(mesg)
+            logger.info("Diverged")
+            logger.info(mesg)
 
     if not IGNORE_DIVERGED:
         if not ier == 1:
             raise SolverDivergedException()
 
     U, V, P = _recover_X(X_, graph)
- 
+
     new_graph = deepcopy(graph)
     for i in range(len(new_graph.ns_x_mesh)):
         new_graph.ns_x_mesh.phi[i] = U[i]
@@ -178,12 +184,11 @@ def solve(graph):
         new_graph.ns_y_mesh.phi[i] = V[i]
     for i in range(len(new_graph.pressure_mesh)):
         new_graph.pressure_mesh.phi[i] = P[i]
- 
+
     return new_graph
 
 
 
-from petsc4py import PETSc
 def solve_using_petsc(graph):
     def residual_function_for_petsc(snes, x, f):
         '''
@@ -253,7 +258,7 @@ def solve_using_petsc(graph):
     J = PETSc.Mat().createAIJ(N, comm=COMM)
     J.setPreallocationNNZ(N)
 
-    print("Building J...")
+    logger.info("Building J...")
     if FULL_JACOBIAN:
         for i in range(N):
             for j in range(N):
@@ -263,8 +268,7 @@ def solve_using_petsc(graph):
 
         for i, j in zip(*np.nonzero(j_structure)):
             J.setValue(i, j, 1.0)
-    print("Done.")
-
+    logger.info("Done.")
 
     J.setUp()
     J.assemble()
@@ -281,7 +285,7 @@ def solve_using_petsc(graph):
 
     snes.setUseFD(True)
 
-    print("Initial guess = %s" % (X,))
+    logger.info("Initial guess = %s" % (X,))
     x.setArray(X)
     b.set(0)
 
@@ -289,19 +293,19 @@ def solve_using_petsc(graph):
     snes.setFromOptions()
 
     def _solver_monitor(snes, its, fnorm):
-        print('  %s Residual function norm %s' % (its, fnorm,))
+        logger.info('  %s Residual function norm %s' % (its, fnorm,))
     snes.setMonitor(_solver_monitor)
 
     snes.setTolerances(rtol=1e-4, atol=1e-4, stol=1e-4, max_it=50)
     snes.solve(b, x)
 #     rh, ih = snes.getConvergenceHistory()
 
-#     print('(residual, number of linear iterations)')
-#     print('\n'.join(str(h) for h in zip(rh, ih)))
+#     logger.info('(residual, number of linear iterations)')
+#     logger.info('\n'.join(str(h) for h in zip(rh, ih)))
 
     if SHOW_SOLVER_DETAILS:
-        print("Number of function calls=%s" % (snes.getFunctionEvaluations()))
-        
+        logger.info("Number of function calls=%s" % (snes.getFunctionEvaluations()))
+
         REASONS = {
             0: 'still iterating',
             # Converged
@@ -311,22 +315,22 @@ def solve_using_petsc(graph):
             5: 'maximum iterations reached',
             7: 'trust region delta',
             # Diverged
-            -1: 'the new x location passed to the function is not in the domain of F',
-            -2: 'maximum function count reached',
-            -3: 'the linear solve failed',
-            -4: 'norm of F is NaN',
+            - 1: 'the new x location passed to the function is not in the domain of F',
+            - 2: 'maximum function count reached',
+            - 3: 'the linear solve failed',
+            - 4: 'norm of F is NaN',
             - 5: 'maximum iterations reached',
-            -6: 'the line search failed',
-            -7: 'inner solve failed',
-            -8: '|| J^T b || is small, implies converged to local minimum of F()',
+            - 6: 'the line search failed',
+            - 7: 'inner solve failed',
+            - 8: '|| J^T b || is small, implies converged to local minimum of F()',
         }
-        
+
         if snes.reason > 0:
-            print("Converged with reason:", REASONS[snes.reason])
+            logger.info("Converged with reason: %s" % (REASONS[snes.reason],))
         else:
-            print("Diverged with reason:", REASONS[snes.reason])
+            logger.info("Diverged with reason: %s" % (REASONS[snes.reason],))
             if snes.reason == -3:
-                print("Linear solver divergence reason code:", snes.ksp.reason)
+                logger.info("Linear solver divergence reason code: %s" % (snes.ksp.reason,))
 
     if not IGNORE_DIVERGED:
         if snes.reason <= 0:
@@ -341,5 +345,5 @@ def solve_using_petsc(graph):
         new_graph.ns_y_mesh.phi[i] = V[i]
     for i in range(len(new_graph.pressure_mesh)):
         new_graph.pressure_mesh.phi[i] = P[i]
- 
+
     return new_graph

@@ -1,28 +1,26 @@
-from lid_driven_cavity_problem import newton_solver
 from copy import copy
+import logging
+
+from lid_driven_cavity_problem import newton_solver
 from lid_driven_cavity_problem.newton_solver import SolverDivergedException
 
+logger = logging.getLogger(__name__)
 
-SHOW_TIMESTEPPER_LOGS = True
-MINIMUM_DT = 1e-4
-
-def run_simulation(graph, final_time, solver=None):
+def run_simulation(graph, final_time, solver=None, minimum_dt=1e-4):
     if solver is None:
-        solver = newton_solver.solve
-    
+        solver = newton_solver.solve_using_petsc
+
     t = 0.0
     while t <= final_time:
-        if graph.dt <= MINIMUM_DT:
+        if graph.dt <= minimum_dt:
             raise RuntimeError("Timestep has reached a too low value. Giving up.")
 
-        if SHOW_TIMESTEPPER_LOGS:
-            print("time: %s/%s" % (t, final_time))
+        logger.info("time: %s/%s" % (t, final_time))
         try:
             new_graph = solver(graph)
         except SolverDivergedException:
             graph.dt /= 2.0
-            if SHOW_TIMESTEPPER_LOGS:
-                print("Simulation diverged. Will try with dt=%s" % (graph.dt,))
+            logger.info("Simulation diverged. Will try with dt=%s" % (graph.dt,))
             continue
 
         # Copy old solution to new solution
@@ -32,6 +30,8 @@ def run_simulation(graph, final_time, solver=None):
             new_mesh.phi_old = copy(old_mesh.phi)
         graph = new_graph
         t += graph.dt
+
         graph.dt *= 2.0
+        logger.info("Simulation converged. Will update dt=%s" % (graph.dt,))
 
     return graph
