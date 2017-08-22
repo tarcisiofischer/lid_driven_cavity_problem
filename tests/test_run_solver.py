@@ -1,13 +1,21 @@
 import os
-import sys
 
-from lid_driven_cavity_problem.newton_solver import solve_using_petsc
+import pytest
+
+from lid_driven_cavity_problem.newton_solver import solve_using_petsc, solve_using_scipy
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import numpy as np
 
 
-def test_small_case():
+@pytest.mark.parametrize(
+    ("solver_function"),
+    (
+        solve_using_petsc,
+        solve_using_scipy,
+    )
+)
+def test_small_case(solver_function):
     size_x = 1.0
     size_y = 1.0
     nx = 11
@@ -20,8 +28,7 @@ def test_small_case():
     U_bc = (mi * Re) / (rho * size_x)
 
     graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
-    solver = solve_using_petsc
-    result = run_simulation(graph, final_time, solver)
+    result = run_simulation(graph, final_time, solver_function)
 
     U = np.array(result.ns_x_mesh.phi)
     V = np.array(result.ns_y_mesh.phi)

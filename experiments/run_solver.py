@@ -1,4 +1,4 @@
-from lid_driven_cavity_problem.newton_solver import solve_using_petsc, solve
+from lid_driven_cavity_problem.newton_solver import solve_using_petsc, solve_using_scipy
 from lid_driven_cavity_problem.options import SOLVER
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
@@ -37,7 +37,7 @@ graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
 if SOLVER == 'petsc':
     solver = solve_using_petsc
 elif SOLVER == 'scipy':
-    solver = solve
+    solver = solve_using_scipy
 result = run_simulation(graph, final_time, solver)
 
 U = np.array(result.ns_x_mesh.phi)
