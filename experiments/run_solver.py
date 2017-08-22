@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from lid_driven_cavity_problem import newton_solver
+from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import matplotlib.pyplot as plt
@@ -11,9 +11,15 @@ import numpy as np
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
-solver = newton_solver.solve_using_petsc
-# solver = newton_solver.solve_using_scipy
+SOLVER_TYPE = 'petsc'
 
+if SOLVER_TYPE == 'petsc':
+    solver = petsc_solver_wrapper.solve
+elif SOLVER_TYPE == 'scipy':
+    solver = scipy_solver_wrapper.solve
+else:
+    print("WARNING: Unknown solver type %s. Will use default solver." % (SOLVER_TYPE,))
+    solver = None
 
 size_x = 1.0
 size_y = 1.0
@@ -42,6 +48,11 @@ result = run_simulation(graph, final_time, solver)
 
 U = np.array(result.ns_x_mesh.phi)
 V = np.array(result.ns_y_mesh.phi)
+
+print("RESULTS")
+print("=" * 100)
+print(U)
+print(V)
 
 U = U.reshape(nx, ny - 1)
 V = V.reshape(nx - 1, ny)

@@ -1,0 +1,2 @@
+class SolverDivergedException(RuntimeError):
+    pass

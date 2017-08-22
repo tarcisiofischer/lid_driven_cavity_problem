@@ -1,14 +1,15 @@
 from copy import copy
 import logging
 
-from lid_driven_cavity_problem import newton_solver
-from lid_driven_cavity_problem.newton_solver import SolverDivergedException
+from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper
+from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
+
 
 logger = logging.getLogger(__name__)
 
 def run_simulation(graph, final_time, solver=None, minimum_dt=1e-4):
     if solver is None:
-        solver = newton_solver.solve_using_petsc
+        solver = petsc_solver_wrapper.solve
 
     t = 0.0
     while t <= final_time:

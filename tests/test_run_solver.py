@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from lid_driven_cavity_problem.newton_solver import solve_using_petsc, solve_using_scipy
+from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import numpy as np
@@ -11,8 +11,8 @@ import numpy as np
 @pytest.mark.parametrize(
     ("solver_function"),
     (
-        solve_using_petsc,
-        solve_using_scipy,
+        petsc_solver_wrapper.solve,
+        scipy_solver_wrapper.solve,
     )
 )
 def test_small_case(solver_function):
