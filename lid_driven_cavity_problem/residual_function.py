@@ -3,9 +3,6 @@ def residual_function(X, graph):
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
     residual = [None] * (len(X))
-    mass_equation_offset = 0
-    ns_x_equation_offset = mass_equation_offset + len(pressure_mesh)
-    ns_y_equation_offset = ns_x_equation_offset + len(ns_x_mesh)
 
     # Knowns (Constants)
     dt = graph.dt
