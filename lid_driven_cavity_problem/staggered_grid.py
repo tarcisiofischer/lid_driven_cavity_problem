@@ -6,13 +6,12 @@ class Mesh2d(object):
         'phi_old',
     )
 
-    def __init__(self, nx, ny):
+    def __init__(self, nx, ny, initial_phi):
         self.nx = nx
         self.ny = ny
 
-        # TODO: Get initial guesses from somewhere
-        self.phi = [1.0] * (self.nx * self.ny)
-        self.phi_old = [1.0] * (self.nx * self.ny)
+        self.phi = [initial_phi] * (self.nx * self.ny)
+        self.phi_old = [initial_phi] * (self.nx * self.ny)
 
 
     def __len__(self):
@@ -32,7 +31,7 @@ class Graph(object):
         'bc',
     )
 
-    def __init__(self, size_x, size_y, nx, ny, dt, rho, mi, bc):
+    def __init__(self, size_x, size_y, nx, ny, dt, rho, mi, bc, initial_P=1.0, initial_U=1.0, initial_V=1.0):
         self.dt = dt
         self.dx = size_x / nx
         self.dy = size_y / ny
@@ -40,9 +39,9 @@ class Graph(object):
         self.mi = mi
         self.bc = bc
 
-        self.pressure_mesh = Mesh2d(nx, ny)
-        self.ns_x_mesh = Mesh2d(nx - 1, ny)
-        self.ns_y_mesh = Mesh2d(nx, ny - 1)
+        self.pressure_mesh = Mesh2d(nx, ny, initial_P)
+        self.ns_x_mesh = Mesh2d(nx - 1, ny, initial_U)
+        self.ns_y_mesh = Mesh2d(nx, ny - 1, initial_V)
 
     def __len__(self):
         return len(self.pressure_mesh) + len(self.ns_x_mesh) + len(self.ns_y_mesh)
