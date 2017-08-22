@@ -5,8 +5,8 @@ from petsc4py import PETSc
 from scipy.optimize.minpack import fsolve
 from scipy.optimize.slsqp import approx_jacobian
 
-from lid_driven_cavity_problem.options import SOLVE_WITH_CLOSE_UVP, \
-    FULL_JACOBIAN, PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
+from lid_driven_cavity_problem.options import FULL_JACOBIAN, \
+    PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
 from lid_driven_cavity_problem.residual_function import residual_function
 import numpy as np
 
@@ -18,21 +18,18 @@ class SolverDivergedException(RuntimeError):
 
 
 def _create_X(U, V, P, graph):
-    if SOLVE_WITH_CLOSE_UVP:
-        X = U + V + P
-    else:
-        X = np.zeros(shape=(3 * len(P),))
-        X[0::3] = P
+    X = np.zeros(shape=(3 * len(P),))
+    X[0::3] = P
 
-        extended_U = np.ones(shape=(len(P),))
-        nx = graph.ns_x_mesh.nx
-        ny = graph.ns_x_mesh.ny
-        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-        extended_U[U_idxs] = U
-        X[1::3] = extended_U
+    extended_U = np.ones(shape=(len(P),))
+    nx = graph.ns_x_mesh.nx
+    ny = graph.ns_x_mesh.ny
+    U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+    extended_U[U_idxs] = U
+    X[1::3] = extended_U
 
-        extended_V = np.r_[V, np.ones(shape=(len(P) - len(V),))]
-        X[2::3] = extended_V
+    extended_V = np.r_[V, np.ones(shape=(len(P) - len(V),))]
+    X[2::3] = extended_V
 
     return X
 
@@ -42,20 +39,16 @@ def _recover_X(X, graph):
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
 
-    if SOLVE_WITH_CLOSE_UVP:
-        U = X[0:len(ns_x_mesh)]
-        V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
-        P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
-    else:
-        P = X[0::3][0:len(pressure_mesh)]
+    P = X[0::3][0:len(pressure_mesh)]
 
-        extended_U = X[1::3]
-        nx = graph.ns_x_mesh.nx
-        ny = graph.ns_x_mesh.ny
-        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-        U = extended_U[U_idxs]
+    extended_U = X[1::3]
+    nx = ns_x_mesh.nx
+    ny = ns_x_mesh.ny
+    U_idxs = np.arange(0, len(ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+    U = extended_U[U_idxs]
 
-        V = X[2::3][0:len(ns_y_mesh)]
+    V = X[2::3][0:len(ns_y_mesh)]
+
     return U, V, P
 
 

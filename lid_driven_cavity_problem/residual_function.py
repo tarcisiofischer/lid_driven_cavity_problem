@@ -1,4 +1,4 @@
-from lid_driven_cavity_problem.options import USE_UPWIND, SOLVE_WITH_CLOSE_UVP
+from lid_driven_cavity_problem.options import USE_UPWIND
 
 
 def residual_function(X, graph):
@@ -19,21 +19,16 @@ def residual_function(X, graph):
     bc = graph.bc
 
     # Extract unknown vectors
-    if SOLVE_WITH_CLOSE_UVP:
-        U = X[0:len(ns_x_mesh)]
-        V = X[len(ns_x_mesh):len(ns_x_mesh) + len(ns_y_mesh)]
-        P = X[len(ns_x_mesh) + len(ns_y_mesh):len(ns_x_mesh) + len(ns_y_mesh) + len(pressure_mesh)]
-    else:
-        import numpy as np
-        P = X[0::3]
+    import numpy as np
+    P = X[0::3]
 
-        extended_U = X[1::3]
-        nx = graph.ns_x_mesh.nx
-        ny = graph.ns_x_mesh.ny
-        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-        U = extended_U[U_idxs]
+    extended_U = X[1::3]
+    nx = graph.ns_x_mesh.nx
+    ny = graph.ns_x_mesh.ny
+    U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+    U = extended_U[U_idxs]
 
-        V = X[2::3][0:len(ns_y_mesh)]
+    V = X[2::3][0:len(ns_y_mesh)]
 
     for i in range(len(pressure_mesh)):
         j = i // pressure_mesh.nx
@@ -57,10 +52,7 @@ def residual_function(X, graph):
         V_s = 0.0 if is_bottom_boundary else V[i_V_s]
 
         # Conservation of Mass
-        if SOLVE_WITH_CLOSE_UVP:
-            ii = mass_equation_offset + i
-        else:
-            ii = 3 * i
+        ii = 3 * i
         residual[ii] = (U_e * dy - U_w * dy) + (V_n * dx - V_s * dx)
 
     for i in range(len(ns_x_mesh)):
@@ -126,18 +118,15 @@ def residual_function(X, graph):
             rho * U_w * ((.5 - beta_U_w) * U_P + (.5 + beta_U_w) * U_W) * dy + \
             rho * V_n * ((.5 - beta_V_n) * U_N + (.5 + beta_V_n) * U_P) * dx - \
             rho * V_s * ((.5 - beta_V_s) * U_P + (.5 + beta_V_s) * U_S) * dx
-        difusive_term  = \
+        difusive_term = \
             mi * dU_e_dx * dy - \
             mi * dU_w_dx * dy + \
             mi * dU_n_dx * dx - \
             mi * dU_s_dx * dx
-        source_term    = -(P_e - P_w) * dy 
+        source_term = -(P_e - P_w) * dy
 
-        if SOLVE_WITH_CLOSE_UVP:
-            ii = ns_x_equation_offset + i
-        else:
-            U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-            ii = 3 * U_idxs[i] + 1
+        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
+        ii = 3 * U_idxs[i] + 1
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     for i in range(len(ns_y_mesh)):
@@ -203,25 +192,20 @@ def residual_function(X, graph):
             rho * U_w * ((.5 - beta_U_w) * V_P + (.5 + beta_U_w) * V_W) * dy + \
             rho * V_n * ((.5 - beta_V_n) * V_N + (.5 + beta_V_n) * V_P) * dx - \
             rho * V_s * ((.5 - beta_V_s) * V_P + (.5 + beta_V_s) * V_S) * dx
-        difusive_term  = \
+        difusive_term = \
             mi * dV_e_dx * dy - \
             mi * dV_w_dx * dy + \
             mi * dV_n_dx * dx - \
             mi * dV_s_dx * dx
-        source_term    = -(P_n - P_s) * dy 
+        source_term = -(P_n - P_s) * dy
 
-        if SOLVE_WITH_CLOSE_UVP:
-            ii = ns_y_equation_offset + i
-        else:
-            ii = 3 * i + 2
+        ii = 3 * i + 2
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
-    if SOLVE_WITH_CLOSE_UVP:
-        pass
-    else:
-        for ii in range(len(X)):
-            if residual[ii] is None:
-                residual[ii] = X[ii]
+    # Set all remaining residuals with x[i] - x[i] = R
+    for ii in range(len(X)):
+        if residual[ii] is None:
+            residual[ii] = X[ii]
 
     # Sanity check
     assert None not in residual, 'Missing equation in residual function'
