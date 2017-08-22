@@ -6,8 +6,7 @@ from petsc4py import PETSc
 from lid_driven_cavity_problem.nonlinear_solver._common import _create_X, _recover_X, \
     _calculate_jacobian_mask
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
-from lid_driven_cavity_problem.options import FULL_JACOBIAN, \
-    PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
+from lid_driven_cavity_problem.options import PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
 from lid_driven_cavity_problem.residual_function import residual_function
 import numpy as np
 
@@ -84,19 +83,9 @@ def solve(graph):
     N = len(X)
     J = PETSc.Mat().createAIJ(N, comm=COMM)
     J.setPreallocationNNZ(N)
-
-    logger.info("Building J...")
-    if FULL_JACOBIAN:
-        for i in range(N):
-            for j in range(N):
-                J.setValue(i, j, 0.0)
-    else:
-        j_structure = _calculate_jacobian_mask(N, graph)
-
-        for i, j in zip(*np.nonzero(j_structure)):
-            J.setValue(i, j, 1.0)
-    logger.info("Done.")
-
+    j_structure = _calculate_jacobian_mask(N, graph)
+    for i, j in zip(*np.nonzero(j_structure)):
+        J.setValue(i, j, 1.0)
     J.setUp()
     J.assemble()
 
