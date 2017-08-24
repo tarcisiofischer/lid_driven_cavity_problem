@@ -99,3 +99,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+/lid_driven_cavity_problem/residual_function/cython_residual_function.cpp

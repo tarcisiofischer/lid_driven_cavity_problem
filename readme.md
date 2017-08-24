@@ -15,3 +15,10 @@ Comparing results with Ghia, Ghia and Shin (1982):
 
 ![U](./images/cmp_ghia_U.png)
 ![V](./images/cmp_ghia_V.png)
+
+Instructions
+------------
+
+In order to build the Cython code, execute:
+
+    $ python setup.py build_ext --inplace
