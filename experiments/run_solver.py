@@ -23,13 +23,13 @@ else:
 
 size_x = 1.0
 size_y = 1.0
-nx = 30
-ny = 30
+nx = 60
+ny = 60
 dt = 1e-2
 rho = 1.0
-final_time = 0.1
+final_time = 20.0
 mi = 1.0
-Re = 100
+Re = 300.0
 U_bc = (mi * Re) / (rho * size_x)
 print("Run Parameters:")
 print("size_x = %s" % (size_x,))
@@ -49,11 +49,6 @@ result = run_simulation(graph, final_time, solver)
 U = np.array(result.ns_x_mesh.phi)
 V = np.array(result.ns_y_mesh.phi)
 
-print("RESULTS")
-print("=" * 100)
-print(U)
-print(V)
-
 U = U.reshape(nx, ny - 1)
 V = V.reshape(nx - 1, ny)
 
@@ -63,8 +58,13 @@ U = (U[:, 1:] + U[:, :-1]) / 2.0
 V = np.r_[[[0.0] * nx], V, [[0.0] * ny]]
 V = (V[1:, :] + V[:-1, :]) / 2.0
 
+
 X, Y = np.meshgrid(np.arange(0.0, size_x, size_x / nx), np.arange(0.0, size_y, size_y / ny))
-plt.figure()
+plt.figure(1)
+speed = np.sqrt(U * U + V * V)
+plt.streamplot(X, Y, U, V, color=U, linewidth=2)
+plt.figure(2)
 plt.title("U and V Interpolated on the center of Pressure control volumes")
 plt.quiver(X, Y, U, V)
+
 plt.show()
