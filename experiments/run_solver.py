@@ -3,6 +3,8 @@ import sys
 import time
 
 from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
+from lid_driven_cavity_problem.residual_function import numpy_residual_function, \
+    pure_python_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import matplotlib.pyplot as plt
@@ -13,6 +15,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
 SOLVER_TYPE = 'petsc'
+LANGUAGE = 'numpy'
 
 if SOLVER_TYPE == 'petsc':
     solver = petsc_solver_wrapper.solve
@@ -22,13 +25,21 @@ else:
     print("WARNING: Unknown solver type %s. Will use default solver." % (SOLVER_TYPE,))
     solver = None
 
+if LANGUAGE == 'python':
+    residual_f = pure_python_residual_function.residual_function
+elif LANGUAGE == 'numpy':
+    residual_f = numpy_residual_function.residual_function
+else:
+    print("WARNING: Unknown residual function %s. Will use default." % (SOLVER_TYPE,))
+    solver = None
+
 size_x = 1.0
 size_y = 1.0
-nx = 150
-ny = 150
+nx = 40
+ny = 40
 dt = 1e-2
 rho = 1.0
-final_time = 500.0
+final_time = 200.0
 mi = 1.0
 Re = 10.0
 U_bc = (mi * Re) / (rho * size_x)
@@ -46,7 +57,7 @@ print("")
 
 graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
 b = time.time()
-result = run_simulation(graph, final_time, solver)
+result = run_simulation(graph, final_time, solver, residual_f)
 print(time.time() - b)
 
 U = np.array(result.ns_x_mesh.phi)

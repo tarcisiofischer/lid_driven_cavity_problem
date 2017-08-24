@@ -7,7 +7,6 @@ from lid_driven_cavity_problem.nonlinear_solver._common import _create_X, _recov
     _calculate_jacobian_mask
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
 from lid_driven_cavity_problem.options import PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
-from lid_driven_cavity_problem.residual_function_numpy import residual_function
 
 
 PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS = {
@@ -84,13 +83,13 @@ class _PetscSolverWrapper(object):
 #         options.setValue('snes_linesearch_type', 'l2')
 #         options.setValue('snes_linesearch_type', 'cp')
 
-    def __call__(self, graph):
+    def __call__(self, graph, residual_f):
         def residual_function_for_petsc(snes, x, f):
             '''
-            Wrapper over our `residual_function` so that it's in a way expected by PETSc.
+            Wrapper over our `residual_f` so that it's in a way expected by PETSc.
             '''
             x = x[:]  # transforms `PETSc.Vec` into `numpy.ndarray`
-            f[:] = residual_function(x, graph)
+            f[:] = residual_f(x, graph)
             f.assemble()
 
         pressure_mesh = graph.pressure_mesh

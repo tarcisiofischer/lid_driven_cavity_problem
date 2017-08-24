@@ -6,13 +6,12 @@ from scipy.optimize.minpack import fsolve
 from lid_driven_cavity_problem.nonlinear_solver._common import _create_X, _recover_X
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
 from lid_driven_cavity_problem.options import PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
-from lid_driven_cavity_problem.residual_function import residual_function
 
 
 logger = logging.getLogger(__name__)
 
 
-def solve(graph):
+def solve(graph, residual_f):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
@@ -27,7 +26,7 @@ def solve(graph):
         _plot_jacobian(graph, X)
         assert False, "Finished plotting Jacobian matrix. Program will be terminated (This is expected behavior)"
 
-    X_, infodict, ier, mesg = fsolve(residual_function, X, args=(graph,), full_output=True)
+    X_, infodict, ier, mesg = fsolve(residual_f, X, args=(graph,), full_output=True)
     if SHOW_SOLVER_DETAILS:
         logger.info("Number of function calls=%s" % (infodict['nfev'],))
         if ier == 1:
