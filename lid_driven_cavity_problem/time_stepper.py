@@ -7,20 +7,25 @@ from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDiverged
 
 logger = logging.getLogger(__name__)
 
-def run_simulation(graph, final_time, solver=None, minimum_dt=1e-4):
+def run_simulation(graph, final_time, solver=None, minimum_dt=1e-6):
     if solver is None:
         solver = petsc_solver_wrapper.solve
 
     t = 0.0
-    while t <= final_time:
-        if graph.dt <= minimum_dt:
-            raise RuntimeError("Timestep has reached a too low value. Giving up.")
+    while t < final_time:
+        if t + graph.dt > final_time:
+            graph.dt = final_time - t
+            logger.info("graph.dt would override final_time. new graph.dt=%s" % (graph.dt,))
 
         logger.info("time: %s/%s" % (t, final_time))
         try:
             new_graph = solver(graph)
         except SolverDivergedException:
             graph.dt /= 2.0
+
+            if graph.dt <= minimum_dt:
+                raise RuntimeError("Timestep has reached a too low value. Giving up.")
+
             logger.info("Simulation diverged. Will try with dt=%s" % (graph.dt,))
             continue
 
@@ -32,7 +37,10 @@ def run_simulation(graph, final_time, solver=None, minimum_dt=1e-4):
         graph = new_graph
         t += graph.dt
 
-        graph.dt *= 2.0
-        logger.info("Simulation converged. Will update dt=%s" % (graph.dt,))
+        if t < final_time:
+            graph.dt *= 2.0
+            logger.info("Simulation converged. Will update dt=%s" % (graph.dt,))
+        else:
+            logger.info("Simulation converged. Finished at t=%s" % (t,))
 
     return graph
