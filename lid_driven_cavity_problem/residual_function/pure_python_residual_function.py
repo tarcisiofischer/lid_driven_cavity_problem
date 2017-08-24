@@ -1,7 +1,32 @@
 def residual_function(X, graph):
+    '''
+    Pure Python (non-vectorized) implementation of the residual function (coupled).
+    Will solve the three equations on order:
+
+    1- Conservation of mass (Equations for P)
+    2- Navier Stokes in X   (Equations for U)
+    2- Navier Stokes in Y   (Equations for V)
+
+    The X vector must have the following format:
+
+    [P0, U0, V0, ... Pn, Un, Vn]
+
+    The equations must be built in the following order, then:
+
+    CM_0
+    NS-X_0
+    NS-Y_0
+    : : :
+    CM_n
+    NS-X_n
+    NS-Y_n
+    '''
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
+
+    # Initialize all residuals with None (Should NOT initialize with zeros, so that we can make a
+    # sanity check in the end of this function!)
     residual = [None] * (len(X))
 
     # Knowns (Constants)
@@ -10,18 +35,21 @@ def residual_function(X, graph):
     dy = graph.dy
     rho = graph.rho
     mi = graph.mi
-    bc = graph.bc
+    bc = graph.bc  # Velocity at the top (U_top)
 
-    # Extract unknown vectors
+    # Extract unknown vectors from the full X vector
+    # TODO: Drop numpy implementation to use pure-python
+    #
     import numpy as np
+    # Pressure
     P = X[0::3]
-
+    # Velocity in X. Note that there are some dummy velocities, in order to keep the same size on
+    # all equations.
     extended_U = X[1::3]
     nx = graph.ns_x_mesh.nx
     ny = graph.ns_x_mesh.ny
     U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
     U = extended_U[U_idxs]
-
     V = X[2::3][0:len(ns_y_mesh)]
 
     for i in range(len(pressure_mesh)):
@@ -185,6 +213,8 @@ def residual_function(X, graph):
         residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     # Set all remaining residuals with x[i] - x[i] = R
+    # Basically, will avoid None on equations for U_dummy that have no equation attached.
+    #
     for ii in range(len(X)):
         if residual[ii] is None:
             residual[ii] = X[ii]
