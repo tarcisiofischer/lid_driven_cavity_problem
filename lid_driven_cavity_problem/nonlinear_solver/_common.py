@@ -48,13 +48,13 @@ def _calculate_jacobian_mask(nx, ny, dof):
         np.ones(shape=(7,)),
         [-nx + 1, -nx, -1, 0, 1, +nx, +nx - 1],
         shape=(N, N),
-        format='coo',
+        format='csr',
     )
 
     j_structure = kron(
         j_structure,
         np.ones(shape=(dof, dof)),
-        format='coo',
+        format='csr',
     )
 
     return j_structure

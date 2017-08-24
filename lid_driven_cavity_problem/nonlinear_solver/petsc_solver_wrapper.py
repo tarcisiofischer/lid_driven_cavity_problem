@@ -11,6 +11,27 @@ from lid_driven_cavity_problem.residual_function import residual_function
 import numpy as np
 
 
+PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS = {
+    0: 'still iterating',
+
+    # Converged
+    2: '||F|| < atol',
+    3: '||F|| < rtol',
+    4: 'Newton computed step size small; || delta x || < stol || x ||',
+    5: 'maximum iterations reached',
+    7: 'trust region delta',
+
+    # Diverged
+    - 1: 'the new x location passed to the function is not in the domain of F',
+    - 2: 'maximum function count reached',
+    - 3: 'the linear solver failed',
+    - 4: 'norm of F is NaN',
+    - 5: 'maximum iterations reached',
+    - 6: 'the line search failed',
+    - 7: 'inner solve failed',
+    - 8: '|| self._petsc_jacobian^T b || is small, implies converged to local minimum of F()',
+}
+
 logger = logging.getLogger(__name__)
 
 class _PetscSolverWrapper(object):
@@ -33,18 +54,18 @@ class _PetscSolverWrapper(object):
 #         options.setValue('log_view', '')
 #         options.setValue('log_all', '')
 
-#         options.setValue('mat_fd_type', 'ds')
-        options.setValue('mat_fd_type', 'wp')
+        options.setValue('mat_fd_type', 'ds')
+#         options.setValue('mat_fd_type', 'wp')
 
-        options.setValue('pc_type', 'none')
-#         options.setValue('pc_type', 'ilu')
+#         options.setValue('pc_type', 'none')
+        options.setValue('pc_type', 'ilu')
 #         options.setValue('pc_type', 'lu')
-#         options.setValue('pc_factor_shift_type', 'NONZERO')
+        options.setValue('pc_factor_shift_type', 'NONZERO')
 #         options.setValue('pc_type', 'svd')
 
 #         options.setValue('ksp_type', 'preonly')
-#         options.setValue('ksp_type', 'gmres')
-        options.setValue('ksp_type', 'lsqr')
+        options.setValue('ksp_type', 'gmres')
+#         options.setValue('ksp_type', 'lsqr')
 
         options.setValue('snes_type', 'newtonls')
 #         options.setValue('snes_type', 'qn')
@@ -88,31 +109,11 @@ class _PetscSolverWrapper(object):
 
         if self._petsc_jacobian is None:
             # Creates the Jacobian matrix structure.
-            self._petsc_jacobian = PETSc.Mat().createAIJ(N, comm=COMM)
             j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
-
-            contiguous_malloc_size = j_structure.nnz
-            logger.info("Trying to allocate full jacobian with nnz=%s" % (contiguous_malloc_size,))
-            while True:
-                if contiguous_malloc_size <= 1:
-                    raise RuntimeError("Could not allocate Jacobian Matrix")
-
-                try:
-                    self._petsc_jacobian.setPreallocationNNZ(contiguous_malloc_size)
-                    logger.info("Jacobian allocation success!")
-                    break
-                except RuntimeError:
-                    # Cannot allocate fully contiguous Jacobian.
-                    # Will try to allocate half the size. The rest will be allocated with malloc
-                    # later (On each setValue)
-                    #
-                    contiguous_malloc_size //= 2
-                    logger.info("Too big malloc. Will retry with nnz=%s" % (contiguous_malloc_size,))
-
-            for i, j in zip(*np.nonzero(j_structure)):
-                self._petsc_jacobian.setValue(i, j, 1.0)
-            self._petsc_jacobian.setUp()
-            self._petsc_jacobian.assemble()
+            logger.info("Jacobian NNZ=%s" % (j_structure.nnz,))
+            csr = (j_structure.indptr, j_structure.indices, j_structure.data)
+            self._petsc_jacobian = PETSc.Mat().createAIJWithArrays(j_structure.shape, csr)
+            self._petsc_jacobian.assemble(assembly=self._petsc_jacobian.AssemblyType.FINAL_ASSEMBLY)
 
         dm = PETSc.DMShell().create(comm=COMM)
         dm.setMatrix(self._petsc_jacobian)
@@ -146,30 +147,10 @@ class _PetscSolverWrapper(object):
 
         if SHOW_SOLVER_DETAILS:
             logger.info("Number of function calls=%s" % (snes.getFunctionEvaluations()))
-
-            REASONS = {
-                0: 'still iterating',
-                # Converged
-                2: '||F|| < atol',
-                3: '||F|| < rtol',
-                4: 'Newton computed step size small; || delta x || < stol || x ||',
-                5: 'maximum iterations reached',
-                7: 'trust region delta',
-                # Diverged
-                - 1: 'the new x location passed to the function is not in the domain of F',
-                - 2: 'maximum function count reached',
-                - 3: 'the linear solve failed',
-                - 4: 'norm of F is NaN',
-                - 5: 'maximum iterations reached',
-                - 6: 'the line search failed',
-                - 7: 'inner solve failed',
-                - 8: '|| self._petsc_jacobian^T b || is small, implies converged to local minimum of F()',
-            }
-
             if snes.reason > 0:
-                logger.info("Converged with reason: %s" % (REASONS[snes.reason],))
+                logger.info("Converged with reason: %s" % (PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS[snes.reason],))
             else:
-                logger.info("Diverged with reason: %s" % (REASONS[snes.reason],))
+                logger.info("Diverged with reason: %s" % (PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS[snes.reason],))
                 if snes.reason == -3:
                     logger.info("Linear solver divergence reason code: %s" % (snes.ksp.reason,))
 
