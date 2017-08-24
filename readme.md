@@ -8,5 +8,10 @@ Everything is solved together (coupled) using a nonlinear solver.
 
 Example results (100x100 mesh, Re=1000.0):
 
-![streamlines](./experiments/100x100_re1000_streamlines.png)
-![quiver](./experiments/100x100_re1000_quiver.png)
+![streamlines](./images/100x100_re1000_streamlines.png)
+![quiver](./images/100x100_re1000_quiver.png)
+
+Comparing results with Ghia, Ghia and Shin (1982):
+
+![U](./images/cmp_ghia_U.png)
+![V](./images/cmp_ghia_V.png)
