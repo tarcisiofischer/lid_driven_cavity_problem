@@ -7,8 +7,7 @@ from lid_driven_cavity_problem.nonlinear_solver._common import _create_X, _recov
     _calculate_jacobian_mask
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
 from lid_driven_cavity_problem.options import PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
-from lid_driven_cavity_problem.residual_function import residual_function
-import numpy as np
+from lid_driven_cavity_problem.residual_function_numpy import residual_function
 
 
 PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS = {
