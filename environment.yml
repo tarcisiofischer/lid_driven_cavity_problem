@@ -9,3 +9,4 @@ dependencies:
   - matplotlib
   - petsc4py
   - cython
+  - pybind11
