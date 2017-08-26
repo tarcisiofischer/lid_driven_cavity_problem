@@ -10,3 +10,4 @@ dependencies:
   - petsc4py
   - cython
   - pybind11
+  - numba

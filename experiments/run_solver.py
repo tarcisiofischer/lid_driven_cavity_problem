@@ -4,7 +4,7 @@ import time
 
 from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
 from lid_driven_cavity_problem.residual_function import numpy_residual_function, \
-    pure_python_residual_function, cython_residual_function
+    pure_python_residual_function, cpp_residual_function, numba_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
 SOLVER_TYPE = 'petsc'
-LANGUAGE = 'numpy'
+LANGUAGE = 'c++'
 
 if SOLVER_TYPE == 'petsc':
     solver = petsc_solver_wrapper.solve
@@ -31,14 +31,18 @@ elif LANGUAGE == 'numpy':
     residual_f = numpy_residual_function.residual_function
 elif LANGUAGE == 'cython':
     residual_f = cython_residual_function.residual_function
+elif LANGUAGE == 'c++':
+    residual_f = cpp_residual_function.residual_function
+elif LANGUAGE == 'numba':
+    residual_f = numba_residual_function.residual_function
 else:
     print("WARNING: Unknown residual function %s. Will use default." % (SOLVER_TYPE,))
     solver = None
 
 size_x = 1.0
 size_y = 1.0
-nx = 40
-ny = 40
+nx = 80
+ny = 80
 dt = 1e-2
 rho = 1.0
 final_time = 200.0

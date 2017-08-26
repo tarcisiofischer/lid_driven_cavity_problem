@@ -1,4 +1,5 @@
-from lid_driven_cavity_problem.residual_function import pure_python_residual_function
+from lid_driven_cavity_problem.residual_function import pure_python_residual_function, \
+    numba_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
 import _residual_function
 import numpy as np
@@ -33,5 +34,6 @@ def test_residual_function():
     reference_results = pure_python_residual_function.residual_function(x, graph)
     for f in [
         _residual_function.residual_function,
+        numba_residual_function.residual_function
     ]:
         assert np.allclose(f(x, graph), reference_results, rtol=1e-6, atol=1e-4)
