@@ -4,60 +4,62 @@
 #include <iostream>
 
 namespace py = pybind11;
-typedef float float_t;
+typedef double __real_t;
+typedef long long __integer_t;
 
-py::array_t<float_t> residual_function(py::array_t<float_t> X, py::object graph) {
-    auto residual = py::array_t<float_t>(X.size());
+py::array residual_function(py::array X, py::object graph)
+{
+    auto residual = py::array_t<__real_t>(X.size());
     auto is_residual_calculated = py::array_t<bool>(X.size());
     
     // Extract useful variables from python objects
     auto residual_size = residual.size();
-    auto pressure_mesh_size = (int)py::len(graph.attr("pressure_mesh"));
-    auto pressure_mesh_nx = (int)py::int_(graph.attr("pressure_mesh").attr("nx"));
-    auto pressure_mesh_ny = (int)py::int_(graph.attr("pressure_mesh").attr("ny"));
-    auto ns_x_mesh_size = (int)py::len(graph.attr("ns_x_mesh"));
-    auto ns_x_mesh_nx = (int)py::int_(graph.attr("ns_x_mesh").attr("nx"));
-    auto ns_x_mesh_ny = (int)py::int_(graph.attr("ns_x_mesh").attr("ny"));
-    auto ns_y_mesh_size = (int)py::len(graph.attr("ns_y_mesh"));
-    auto ns_y_mesh_nx = (int)py::int_(graph.attr("ns_y_mesh").attr("nx"));
-    auto ns_y_mesh_ny = (int)py::int_(graph.attr("ns_y_mesh").attr("ny"));
-    auto *residual_ptr = (float_t *) residual.request().ptr;
+    auto pressure_mesh_size = (__integer_t)py::len(graph.attr("pressure_mesh"));
+    auto pressure_mesh_nx = (__integer_t)py::int_(graph.attr("pressure_mesh").attr("nx"));
+    auto pressure_mesh_ny = (__integer_t)py::int_(graph.attr("pressure_mesh").attr("ny"));
+    auto ns_x_mesh_size = (__integer_t)py::len(graph.attr("ns_x_mesh"));
+    auto ns_x_mesh_nx = (__integer_t)py::int_(graph.attr("ns_x_mesh").attr("nx"));
+    auto ns_x_mesh_ny = (__integer_t)py::int_(graph.attr("ns_x_mesh").attr("ny"));
+    auto ns_y_mesh_size = (__integer_t)py::len(graph.attr("ns_y_mesh"));
+    auto ns_y_mesh_nx = (__integer_t)py::int_(graph.attr("ns_y_mesh").attr("nx"));
+    auto ns_y_mesh_ny = (__integer_t)py::int_(graph.attr("ns_y_mesh").attr("ny"));
+    auto *residual_ptr = (__real_t *) residual.request().ptr;
     auto *is_residual_calculated_ptr = (bool *)is_residual_calculated.request().ptr;
-    auto *X_ptr = (float_t *) X.request().ptr;
-    auto *ns_x_mesh_phi_old = (float_t *)((py::array_t<float_t>)(graph.attr("ns_x_mesh").attr("phi_old"))).request().ptr;
-    auto *ns_y_mesh_phi_old = (float_t *)((py::array_t<float_t>)(graph.attr("ns_y_mesh").attr("phi_old"))).request().ptr;
+    auto *X_ptr = (__real_t *) X.request().ptr;
+    auto *ns_x_mesh_phi_old = (__real_t *)((py::array_t<__real_t>)(graph.attr("ns_x_mesh").attr("phi_old"))).request().ptr;
+    auto *ns_y_mesh_phi_old = (__real_t *)((py::array_t<__real_t>)(graph.attr("ns_y_mesh").attr("phi_old"))).request().ptr;
 
     // Initialization
-    for(int i = 0; i < (int)residual_size; ++i) {
+    for(__integer_t i = 0; i < (__integer_t)residual_size; ++i) {
         is_residual_calculated_ptr[i] = false;
     }
 
     // Knowns (Constants)
-    auto dt = (float_t)py::float_(graph.attr("dt"));
-    auto dx = (float_t)py::float_(graph.attr("dx"));
-    auto dy = (float_t)py::float_(graph.attr("dy"));
-    auto rho = (float_t)py::float_(graph.attr("rho"));
-    auto mi = (float_t)py::float_(graph.attr("mi"));
-    auto bc = (float_t)py::float_(graph.attr("bc")); // Velocity at the top (U_top)
+    auto dt = (__real_t)py::float_(graph.attr("dt"));
+    auto dx = (__real_t)py::float_(graph.attr("dx"));
+    auto dy = (__real_t)py::float_(graph.attr("dy"));
+    auto rho = (__real_t)py::float_(graph.attr("rho"));
+    auto mi = (__real_t)py::float_(graph.attr("mi"));
+    auto bc = (__real_t)py::float_(graph.attr("bc")); // Velocity at the top (U_top)
 
-    std::vector<float_t> P;
-    std::vector<float_t> U;
-    std::vector<float_t> V;
-    for (int i = 0; i < (int)pressure_mesh_size; ++i) {
+    std::vector<__real_t> P;
+    std::vector<__real_t> U;
+    std::vector<__real_t> V;
+    for (__integer_t i = 0; i < (__integer_t)pressure_mesh_size; ++i) {
         P.push_back(X_ptr[3 * i]);
 
         if ((i + 1) % pressure_mesh_nx != 0) {
             U.push_back(X_ptr[3 * i + 1]);
         }
 
-        if (i < (int)ns_y_mesh_size) {
+        if (i < (__integer_t)ns_y_mesh_size) {
             V.push_back(X_ptr[3 * i + 2]);
         }
     }
 
     // Residual function for conservation of mass
-    for (int i = 0; i < (int)pressure_mesh_size; ++i) {
-        auto j = (int)i / pressure_mesh_nx;
+    for (__integer_t i = 0; i < (__integer_t)pressure_mesh_size; ++i) {
+        auto j = (__integer_t)i / pressure_mesh_nx;
         
         // Index conversion
         auto i_U_w = i - j - 1;
@@ -84,8 +86,8 @@ py::array_t<float_t> residual_function(py::array_t<float_t> X, py::object graph)
     }
 
     // Residual function for Navier Stokes (X)
-    for (int i = 0; i < (int)ns_x_mesh_size; ++i) {
-        auto j = (int)i / ns_x_mesh_nx;
+    for (__integer_t i = 0; i < (__integer_t)ns_x_mesh_size; ++i) {
+        auto j = (__integer_t)i / ns_x_mesh_nx;
 
         // Index conversion
         auto i_U_P = i;
@@ -93,7 +95,7 @@ py::array_t<float_t> residual_function(py::array_t<float_t> X, py::object graph)
         auto i_U_E = i + 1;
         auto i_U_N = i + ns_x_mesh_nx;
         auto i_U_S = i - ns_x_mesh_nx;
-        auto i_P_w = i + ((int)i / ns_x_mesh_nx);
+        auto i_P_w = i + ((__integer_t)i / ns_x_mesh_nx);
         auto i_P_e = i_P_w + 1;
         auto i_V_NW = i + j;
         auto i_V_NE = i_V_NW + 1;
@@ -154,8 +156,8 @@ py::array_t<float_t> residual_function(py::array_t<float_t> X, py::object graph)
     }
 
     // Residual function for Navier Stokes (Y)
-    for (int i = 0; i < (int)ns_y_mesh_size; ++i) {
-        auto j = (int)i / ns_y_mesh_nx;
+    for (__integer_t i = 0; i < (__integer_t)ns_y_mesh_size; ++i) {
+        auto j = (__integer_t)i / ns_y_mesh_nx;
 
         // Index conversion
         auto i_V_P = i;
@@ -226,7 +228,7 @@ py::array_t<float_t> residual_function(py::array_t<float_t> X, py::object graph)
     // Set all remaining residuals with x[i] - x[i] = R
     // Basically, will avoid None on equations for U_dummy that have no equation attached.
     //
-    for (int ii = 0; ii < (int)residual_size; ++ii) {
+    for (__integer_t ii = 0; ii < (__integer_t)residual_size; ++ii) {
         if (!is_residual_calculated_ptr[ii]) {
             residual_ptr[ii] = X_ptr[ii];
         }

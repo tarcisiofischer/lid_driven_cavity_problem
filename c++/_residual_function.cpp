@@ -3,7 +3,7 @@
 
 namespace py = pybind11;
 
-py::array_t<float> residual_function(py::array_t<float> X, py::object graph);
+py::array residual_function(py::array X, py::object graph);
 
 PYBIND11_PLUGIN(_residual_function) {
     py::module m("_residual_function");

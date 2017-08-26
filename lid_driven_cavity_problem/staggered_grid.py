@@ -10,8 +10,9 @@ class Mesh2d(object):
         self.nx = nx
         self.ny = ny
 
-        self.phi = [initial_phi] * (self.nx * self.ny)
-        self.phi_old = [initial_phi] * (self.nx * self.ny)
+        import numpy as np
+        self.phi = np.array([initial_phi] * (self.nx * self.ny))
+        self.phi_old = np.array([initial_phi] * (self.nx * self.ny))
 
 
     def __len__(self):
