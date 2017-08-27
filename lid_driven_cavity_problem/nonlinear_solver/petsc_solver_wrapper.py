@@ -84,22 +84,29 @@ class _PetscSolverWrapper(object):
 #         options.setValue('snes_linesearch_type', 'cp')
 
     def __call__(self, graph, residual_f):
+        new_graph = deepcopy(graph)
+        new_graph.ns_x_mesh.phi_old = deepcopy(graph.ns_x_mesh.phi)
+        new_graph.ns_y_mesh.phi_old = deepcopy(graph.ns_y_mesh.phi)
+        new_graph.pressure_mesh.phi_old = deepcopy(graph.pressure_mesh.phi)
+
         def residual_function_for_petsc(snes, x, f):
             '''
             Wrapper over our `residual_f` so that it's in a way expected by PETSc.
             '''
             x = x[:]  # transforms `PETSc.Vec` into `numpy.ndarray`
-            f[:] = residual_f(x, graph)
+            f[:] = residual_f(x, new_graph)
             f.assemble()
 
-        pressure_mesh = graph.pressure_mesh
-        ns_x_mesh = graph.ns_x_mesh
-        ns_y_mesh = graph.ns_y_mesh
-        X = _create_X(ns_x_mesh.phi, ns_y_mesh.phi, pressure_mesh.phi, graph)
+        pressure_mesh = new_graph.pressure_mesh
+        ns_x_mesh = new_graph.ns_x_mesh
+        ns_y_mesh = new_graph.ns_y_mesh
+
+        # Prepare initial guess
+        X = _create_X(ns_x_mesh.phi, ns_y_mesh.phi, pressure_mesh.phi, new_graph)
 
         if PLOT_JACOBIAN:
             from lid_driven_cavity_problem.nonlinear_solver._utils import _plot_jacobian
-            _plot_jacobian(graph, X)
+            _plot_jacobian(new_graph, X)
             assert False, "Finished plotting Jacobian matrix. Program will be terminated (This is expected behavior)"
 
         COMM = PETSc.COMM_WORLD
@@ -138,10 +145,6 @@ class _PetscSolverWrapper(object):
 
         snes.setTolerances(rtol=1e-4, atol=1e-4, stol=1e-4, max_it=50)
         snes.solve(b, x)
-    #     rh, ih = snes.getConvergenceHistory()
-
-    #     logger.info('(residual, number of linear iterations)')
-    #     logger.info('\n'.join(str(h) for h in zip(rh, ih)))
 
         if SHOW_SOLVER_DETAILS:
             logger.info("Number of function calls=%s" % (snes.getFunctionEvaluations()))
@@ -156,15 +159,10 @@ class _PetscSolverWrapper(object):
             if snes.reason <= 0:
                 raise SolverDivergedException()
 
-        U, V, P = _recover_X(x, graph)
-
-        new_graph = deepcopy(graph)
-        for i in range(len(new_graph.ns_x_mesh)):
-            new_graph.ns_x_mesh.phi[i] = U[i]
-        for i in range(len(new_graph.ns_y_mesh)):
-            new_graph.ns_y_mesh.phi[i] = V[i]
-        for i in range(len(new_graph.pressure_mesh)):
-            new_graph.pressure_mesh.phi[i] = P[i]
+        U, V, P = _recover_X(x, new_graph)
+        new_graph.ns_x_mesh.phi = U
+        new_graph.ns_y_mesh.phi = V
+        new_graph.pressure_mesh.phi = P
 
         return new_graph
 

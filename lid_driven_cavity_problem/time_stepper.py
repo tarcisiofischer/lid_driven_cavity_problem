@@ -32,22 +32,18 @@ def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1
             logger.info("Simulation diverged. Will try with dt=%s" % (graph.dt,))
             continue
 
-        # Copy old solution to new solution
-        for mesh_name in ['pressure_mesh', 'ns_x_mesh', 'ns_y_mesh']:
-            new_mesh = getattr(new_graph, mesh_name)
-            old_mesh = getattr(graph, mesh_name)
-            new_mesh.phi_old = copy(old_mesh.phi)
         graph = new_graph
         t += graph.dt
 
         if final_time == None:
             import numpy as np
-            norm = np.max(graph.ns_x_mesh.phi - graph.ns_x_mesh.phi_old) / graph.bc
-            if norm < 1e-8:
+            norm = np.linalg.norm(graph.ns_x_mesh.phi - graph.ns_x_mesh.phi_old, ord=np.inf) / graph.bc
+            if norm < 1e-4:
                 logger.info("Simulation reached Steady State at t=%s (norm=%s)" % (t, norm,))
                 break
             else:
                 logger.info("norm=%s" % (norm,))
+            graph.dt *= 1.2
         elif t < final_time:
             graph.dt *= 2.0
             logger.info("Simulation converged. Will update dt=%s" % (graph.dt,))
