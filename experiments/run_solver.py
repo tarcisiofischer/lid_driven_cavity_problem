@@ -4,7 +4,8 @@ import time
 
 from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
 from lid_driven_cavity_problem.residual_function import numpy_residual_function, \
-    pure_python_residual_function, cpp_residual_function, numba_residual_function
+    pure_python_residual_function, cpp_residual_function, numba_residual_function, \
+    cython_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
 from lid_driven_cavity_problem.time_stepper import run_simulation
 import matplotlib.pyplot as plt
