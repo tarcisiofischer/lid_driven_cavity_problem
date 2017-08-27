@@ -1,5 +1,5 @@
 from lid_driven_cavity_problem.residual_function import pure_python_residual_function, \
-    numba_residual_function, cython_residual_function
+    numba_residual_function, cython_residual_function, numpy_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
 import _residual_function
 import numpy as np
@@ -33,6 +33,7 @@ def test_residual_function():
 
     reference_results = pure_python_residual_function.residual_function(x, graph)
     for f in [
+        numpy_residual_function.residual_function,
         _residual_function.residual_function,
         numba_residual_function.residual_function,
         cython_residual_function.residual_function,

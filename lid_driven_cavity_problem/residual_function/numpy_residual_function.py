@@ -135,18 +135,10 @@ def residual_function(X, graph):
     U_w = (U_P + U_W) / 2.0
     V_n = (V_NE + V_NW) / 2.0
     V_s = (V_SE + V_SW) / 2.0
-    beta_U_e = np.zeros(shape=(len(ns_x_mesh)))
-    beta_U_w = np.zeros(shape=(len(ns_x_mesh)))
-    beta_V_n = np.zeros(shape=(len(ns_x_mesh)))
-    beta_V_s = np.zeros(shape=(len(ns_x_mesh)))
-    beta_U_e[U_e > 0.0] = 0.5
-    beta_U_w[U_w > 0.0] = 0.5
-    beta_V_n[V_n > 0.0] = 0.5
-    beta_V_s[V_s > 0.0] = 0.5
-    beta_U_e[U_e <= 0.0] = -0.5
-    beta_U_w[U_w <= 0.0] = -0.5
-    beta_V_n[V_n <= 0.0] = -0.5
-    beta_V_s[V_s <= 0.0] = -0.5
+    beta_U_e = np.where(U_e > 0.0, 0.5, -0.5)
+    beta_U_w = np.where(U_w > 0.0, 0.5, -0.5)
+    beta_V_n = np.where(V_n > 0.0, 0.5, -0.5)
+    beta_V_s = np.where(V_s > 0.0, 0.5, -0.5)
 
     # Terms calculation for Navier Stokes X
     transient_term = (rho * U_P - rho * U_P_old) * (dx * dy / dt)
@@ -163,8 +155,7 @@ def residual_function(X, graph):
     source_term = -(P_e - P_w) * dy
 
     # Residual equation for Navier Stokes X
-    U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-    ii = 3 * U_idxs[i] + 1
+    ii = 3 * (i + j) + 1
     residual[ii] = transient_term + advective_term - difusive_term - source_term
 
     # Navier Stokes (Y)
@@ -228,8 +219,10 @@ def residual_function(X, graph):
     U_SW[~is_left_boundary] = U[i_U_SW][~is_left_boundary]
     U_NE[~is_right_boundary] = U[i_U_NE][~is_right_boundary]
     U_NE[is_top_boundary] = bc
+    U_NE[is_right_boundary] = 0.0
     U_NW[~is_left_boundary] = U[i_U_NW][~is_left_boundary]
     U_NW[is_top_boundary] = bc
+    U_NW[is_left_boundary] = 0.0
 
     # Calculated (Interpolated and Secondary Variables)
     dV_e_dx = (V_E - V_P) / dx
@@ -240,18 +233,10 @@ def residual_function(X, graph):
     U_w = (U_NW + U_SW) / 2.0
     V_n = (V_P + V_N) / 2.0
     V_s = (V_S + V_P) / 2.0
-    beta_U_e = np.zeros(shape=(len(ns_y_mesh)))
-    beta_U_w = np.zeros(shape=(len(ns_y_mesh)))
-    beta_V_n = np.zeros(shape=(len(ns_y_mesh)))
-    beta_V_s = np.zeros(shape=(len(ns_y_mesh)))
-    beta_U_e[U_e > 0.0] = 0.5
-    beta_U_w[U_w > 0.0] = 0.5
-    beta_V_n[V_n > 0.0] = 0.5
-    beta_V_s[V_s > 0.0] = 0.5
-    beta_U_e[U_e <= 0.0] = -0.5
-    beta_U_w[U_w <= 0.0] = -0.5
-    beta_V_n[V_n <= 0.0] = -0.5
-    beta_V_s[V_s <= 0.0] = -0.5
+    beta_U_e = np.where(U_e > 0.0, 0.5, -0.5)
+    beta_U_w = np.where(U_w > 0.0, 0.5, -0.5)
+    beta_V_n = np.where(V_n > 0.0, 0.5, -0.5)
+    beta_V_s = np.where(V_s > 0.0, 0.5, -0.5)
 
     # Term calculations for Navier Stokes Y
     transient_term = (rho * V_P - rho * V_P_old) * (dx * dy / dt)
@@ -274,11 +259,7 @@ def residual_function(X, graph):
     # Remaining functions (If any)
     #===============================================================================================
     # Set all remaining residuals with x[i] - x[i] = R
-    for ii in range(len(X)):
-        if residual[ii] == np.inf:
-            residual[ii] = X[ii]
-
-    # Sanity check
-    assert np.inf not in residual, 'Missing equation in residual function'
+    unused_functions_idxs = np.where(residual == np.inf)
+    residual[unused_functions_idxs] = X[unused_functions_idxs]
 
     return residual
