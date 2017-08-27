@@ -1,4 +1,4 @@
-from copy import copy
+from copy import copy, deepcopy
 import logging
 
 from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper
@@ -15,8 +15,8 @@ def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1
         residual_f = numpy_residual_function.residual_function
 
     t = 0.0
-    while t < final_time:
-        if t + graph.dt > final_time:
+    while final_time is None or t < final_time:
+        if final_time is not None and t + graph.dt > final_time:
             graph.dt = final_time - t
             logger.info("graph.dt would override final_time. new graph.dt=%s" % (graph.dt,))
 
@@ -40,7 +40,15 @@ def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1
         graph = new_graph
         t += graph.dt
 
-        if t < final_time:
+        if final_time == None:
+            import numpy as np
+            norm = np.max(graph.ns_x_mesh.phi - graph.ns_x_mesh.phi_old) / graph.bc
+            if norm < 1e-8:
+                logger.info("Simulation reached Steady State at t=%s (norm=%s)" % (t, norm,))
+                break
+            else:
+                logger.info("norm=%s" % (norm,))
+        elif t < final_time:
             graph.dt *= 2.0
             logger.info("Simulation converged. Will update dt=%s" % (graph.dt,))
         else:
