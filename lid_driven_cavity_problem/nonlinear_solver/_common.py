@@ -8,14 +8,14 @@ def _create_X(U, V, P, graph):
     X = np.zeros(shape=(3 * len(P),))
     X[0::3] = P
 
-    extended_U = np.ones(shape=(len(P),))
+    extended_U = np.zeros(shape=(len(P),))
     nx = graph.ns_x_mesh.nx
     ny = graph.ns_x_mesh.ny
     U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
     extended_U[U_idxs] = U
     X[1::3] = extended_U
 
-    extended_V = np.r_[V, np.ones(shape=(len(P) - len(V),))]
+    extended_V = np.r_[V, np.zeros(shape=(len(P) - len(V),))]
     X[2::3] = extended_V
 
     return X
