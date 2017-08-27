@@ -250,7 +250,7 @@ def residual_function(X, graph):
         mi * dV_w_dx * dy + \
         mi * dV_n_dx * dx - \
         mi * dV_s_dx * dx
-    source_term = -(P_n - P_s) * dy
+    source_term = -(P_n - P_s) * dx
 
     # Residual equation for Navier Stokes Y
     ii = 3 * i + 2

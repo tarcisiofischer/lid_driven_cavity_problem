@@ -218,7 +218,7 @@ py::array residual_function(py::array X, py::object graph)
             mi * dV_w_dx * dy + \
             mi * dV_n_dx * dx - \
             mi * dV_s_dx * dx;
-        auto source_term = -(P_n - P_s) * dy;
+        auto source_term = -(P_n - P_s) * dx;
 
         auto ii = 3 * i + 2;
         residual_ptr[ii] = transient_term + advective_term - difusive_term - source_term;

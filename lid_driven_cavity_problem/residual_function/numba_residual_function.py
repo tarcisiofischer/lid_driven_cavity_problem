@@ -208,7 +208,7 @@ def _residual_function_helper(
             mi * dV_w_dx * dy + \
             mi * dV_n_dx * dx - \
             mi * dV_s_dx * dx
-        source_term = -(P_n - P_s) * dy
+        source_term = -(P_n - P_s) * dx
 
         ii = 3 * i + 2
         residual[ii] = transient_term + advective_term - difusive_term - source_term
