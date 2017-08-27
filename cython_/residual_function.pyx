@@ -1,46 +1,23 @@
-def residual_function(X, graph):
-    '''
-    Pure Python (non-vectorized) implementation of the residual function (coupled).
-    Will solve the three equations on order:
+import numpy as np
+cimport numpy as np
+from libcpp cimport bool
 
-    1- Conservation of mass (Equations for P)
-    2- Navier Stokes in X   (Equations for U)
-    2- Navier Stokes in Y   (Equations for V)
-
-    The X vector must have the following format:
-
-    [P0, U0, V0, ... Pn, Un, Vn]
-
-    The equations must be built in the following order, then:
-
-    CM_0
-    NS-X_0
-    NS-Y_0
-    : : :
-    CM_n
-    NS-X_n
-    NS-Y_n
-    '''
+def residual_function(np.ndarray X, graph):
     pressure_mesh = graph.pressure_mesh
     ns_x_mesh = graph.ns_x_mesh
     ns_y_mesh = graph.ns_y_mesh
 
-    # Initialize all residuals with None (Should NOT initialize with zeros, so that we can make a
-    # sanity check in the end of this function!)
-    residual = [None] * (len(X))
+    cdef np.ndarray residual = np.zeros(shape=(len(X),))
+    cdef np.ndarray is_residual_calculated = np.zeros(shape=(len(X),), dtype=np.bool)
 
     # Knowns (Constants)
-    dt = graph.dt
-    dx = graph.dx
-    dy = graph.dy
-    rho = graph.rho
-    mi = graph.mi
-    bc = graph.bc  # Velocity at the top (U_top)
+    cdef double dt = graph.dt
+    cdef double dx = graph.dx
+    cdef double dy = graph.dy
+    cdef double rho = graph.rho
+    cdef double mi = graph.mi
+    cdef double bc = graph.bc  # Velocity at the top (U_top)
 
-    # Extract unknown vectors from the full X vector
-    # TODO: Drop numpy implementation to use pure-python
-    #
-    import numpy as np
     # Pressure
     P = X[0::3]
     # Velocity in X. Note that there are some dummy velocities, in order to keep the same size on
@@ -51,6 +28,87 @@ def residual_function(X, graph):
     U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
     U = extended_U[U_idxs]
     V = X[2::3][0:len(ns_y_mesh)]
+
+    cdef int \
+        i,\
+        j,\
+        ii,\
+        i_U_w,\
+        i_U_e,\
+        i_V_n,\
+        i_V_s,\
+        i_U_P,\
+        i_U_W,\
+        i_U_E,\
+        i_U_N,\
+        i_U_S,\
+        i_P_w,\
+        i_P_e,\
+        i_V_NW,\
+        i_V_NE,\
+        i_V_SW,\
+        i_V_SE,\
+        i_V_P,\
+        i_V_W,\
+        i_V_E,\
+        i_V_N,\
+        i_V_S,\
+        i_P_n,\
+        i_P_s,\
+        i_U_SE,\
+        i_U_SW,\
+        i_U_NE,\
+        i_U_NW
+    cdef bool \
+        is_left_boundary,\
+        is_right_boundary,\
+        is_bottom_boundary,\
+        is_top_boundary
+    cdef double \
+        U_w,\
+        U_e,\
+        V_n,\
+        V_s,\
+        U_P_old,\
+        V_P_old,\
+        U_P,\
+        U_W,\
+        U_E,\
+        U_N,\
+        U_S,\
+        P_w,\
+        P_e,\
+        V_NE,\
+        V_NW,\
+        V_SE,\
+        V_SW,\
+        V_P,\
+        V_E,\
+        V_W,\
+        V_N,\
+        V_S,\
+        P_n,\
+        P_s,\
+        U_SE,\
+        U_SW,\
+        U_NE,\
+        U_NW,\
+        dU_e_dx,\
+        dU_w_dx,\
+        dU_n_dx,\
+        dU_s_dx,\
+        dV_e_dx,\
+        dV_w_dx,\
+        dV_n_dx,\
+        dV_s_dx,\
+        beta_U_e,\
+        beta_U_w,\
+        beta_V_n,\
+        beta_V_s,\
+        transient_term,\
+        advective_term,\
+        difusive_term,\
+        source_term
 
     for i in range(len(pressure_mesh)):
         j = i // pressure_mesh.nx
@@ -76,6 +134,7 @@ def residual_function(X, graph):
         # Conservation of Mass
         ii = 3 * i
         residual[ii] = (U_e * dy - U_w * dy) + (V_n * dx - V_s * dx)
+        is_residual_calculated[ii] = True
 
     for i in range(len(ns_x_mesh)):
         j = i // ns_x_mesh.nx
@@ -141,9 +200,9 @@ def residual_function(X, graph):
             mi * dU_s_dx * dx
         source_term = -(P_e - P_w) * dy
 
-        U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-        ii = 3 * U_idxs[i] + 1
+        ii = 3 * (i + j) + 1
         residual[ii] = transient_term + advective_term - difusive_term - source_term
+        is_residual_calculated[ii] = True
 
     for i in range(len(ns_y_mesh)):
         j = i // ns_y_mesh.nx
@@ -211,15 +270,13 @@ def residual_function(X, graph):
 
         ii = 3 * i + 2
         residual[ii] = transient_term + advective_term - difusive_term - source_term
+        is_residual_calculated[ii] = True
 
     # Set all remaining residuals with x[i] - x[i] = R
     # Basically, will avoid None on equations for U_dummy that have no equation attached.
     #
     for ii in range(len(X)):
-        if residual[ii] is None:
+        if not is_residual_calculated[ii]:
             residual[ii] = X[ii]
-
-    # Sanity check
-    assert None not in residual, 'Missing equation in residual function'
 
     return residual
