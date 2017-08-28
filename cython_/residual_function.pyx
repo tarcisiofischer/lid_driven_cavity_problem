@@ -1,33 +1,46 @@
 import numpy as np
 cimport numpy as np
 from libcpp cimport bool
+import cython
 
-def residual_function(np.ndarray X, graph):
-    pressure_mesh = graph.pressure_mesh
-    ns_x_mesh = graph.ns_x_mesh
-    ns_y_mesh = graph.ns_y_mesh
 
-    cdef np.ndarray residual = np.zeros(shape=(len(X),))
-    cdef np.ndarray is_residual_calculated = np.zeros(shape=(len(X),), dtype=np.bool)
+ctypedef unsigned char uint8_t
 
+
+cdef c_residual_function(
+    np.ndarray[double, ndim=1, mode='c'] X,
     # Knowns (Constants)
-    cdef double dt = graph.dt
-    cdef double dx = graph.dx
-    cdef double dy = graph.dy
-    cdef double rho = graph.rho
-    cdef double mi = graph.mi
-    cdef double bc = graph.bc  # Velocity at the top (U_top)
+    double dt,
+    double dx,
+    double dy,
+    double rho,
+    double mi,
+    double bc,  # Velocity at the top (U_top)
+    int pressure_mesh_len,
+    int pressure_mesh_nx,
+    int pressure_mesh_ny,
+    int ns_x_mesh_len,
+    int ns_x_mesh_nx,
+    int ns_x_mesh_ny,
+    int ns_y_mesh_len,
+    int ns_y_mesh_nx,
+    int ns_y_mesh_ny,
+    np.ndarray[double] ns_x_mesh_phi_old,
+    np.ndarray[double] ns_y_mesh_phi_old,
+    ):
+    cdef np.ndarray[double, ndim=1, mode='c'] residual = np.zeros(shape=(len(X),))
+    cdef np.ndarray[uint8_t, ndim=1, mode='c'] is_residual_calculated = np.zeros(shape=(len(X),), dtype=np.uint8)
 
     # Pressure
-    P = X[0::3]
+    cdef np.ndarray[double, ndim=1] P = X[0::3]
     # Velocity in X. Note that there are some dummy velocities, in order to keep the same size on
     # all equations.
-    extended_U = X[1::3]
-    nx = graph.ns_x_mesh.nx
-    ny = graph.ns_x_mesh.ny
-    U_idxs = np.arange(0, len(graph.ns_x_mesh)) + np.repeat(np.arange(0, ny), nx)
-    U = extended_U[U_idxs]
-    V = X[2::3][0:len(ns_y_mesh)]
+    cdef np.ndarray[double, ndim=1] extended_U = X[1::3]
+    nx = ns_x_mesh_nx
+    ny = ns_x_mesh_ny
+    cdef np.ndarray[int, ndim=1, mode='c'] U_idxs = np.arange(0, ns_x_mesh_len) + np.repeat(np.arange(0, ny), nx)
+    cdef np.ndarray[double, ndim=1] U = extended_U[U_idxs]
+    cdef np.ndarray[double, ndim=1] V = X[2::3][0:ns_y_mesh_len]
 
     cdef int \
         i,\
@@ -110,20 +123,20 @@ def residual_function(np.ndarray X, graph):
         difusive_term,\
         source_term
 
-    for i in range(len(pressure_mesh)):
-        j = i // pressure_mesh.nx
+    for i in range(pressure_mesh_len):
+        j = i // pressure_mesh_nx
 
         # Index conversion
         i_U_w = i - j - 1
         i_U_e = i_U_w + 1
         i_V_n = i
-        i_V_s = i_V_n - pressure_mesh.nx
+        i_V_s = i_V_n - pressure_mesh_nx
 
         # Knowns
-        is_left_boundary = i % pressure_mesh.nx == 0
-        is_right_boundary = (i + 1) % pressure_mesh.nx == 0
-        is_bottom_boundary = j % pressure_mesh.ny == 0
-        is_top_boundary = (j + 1) % pressure_mesh.ny == 0
+        is_left_boundary = i % pressure_mesh_nx == 0
+        is_right_boundary = (i + 1) % pressure_mesh_nx == 0
+        is_bottom_boundary = j % pressure_mesh_ny == 0
+        is_top_boundary = (j + 1) % pressure_mesh_ny == 0
 
         # Unknowns
         U_w = 0.0 if is_left_boundary else U[i_U_w]
@@ -136,28 +149,28 @@ def residual_function(np.ndarray X, graph):
         residual[ii] = (U_e * dy - U_w * dy) + (V_n * dx - V_s * dx)
         is_residual_calculated[ii] = True
 
-    for i in range(len(ns_x_mesh)):
-        j = i // ns_x_mesh.nx
+    for i in range(ns_x_mesh_len):
+        j = i // ns_x_mesh_nx
 
         # Index conversion
         i_U_P = i
         i_U_W = i - 1
         i_U_E = i + 1
-        i_U_N = i + ns_x_mesh.nx
-        i_U_S = i - ns_x_mesh.nx
-        i_P_w = i + (i // ns_x_mesh.nx)
+        i_U_N = i + ns_x_mesh_nx
+        i_U_S = i - ns_x_mesh_nx
+        i_P_w = i + (i // ns_x_mesh_nx)
         i_P_e = i_P_w + 1
         i_V_NW = i + j
         i_V_NE = i_V_NW + 1
-        i_V_SW = i_V_NW - ns_y_mesh.nx
-        i_V_SE = i_V_NE - ns_y_mesh.nx
+        i_V_SW = i_V_NW - ns_y_mesh_nx
+        i_V_SE = i_V_NE - ns_y_mesh_nx
 
         # Knowns
-        U_P_old = ns_x_mesh.phi_old[i_U_P]
-        is_left_boundary = i % ns_x_mesh.nx == 0
-        is_right_boundary = (i + 1) % ns_x_mesh.nx == 0
-        is_bottom_boundary = j % ns_x_mesh.ny == 0
-        is_top_boundary = (j + 1) % ns_x_mesh.ny == 0
+        U_P_old = ns_x_mesh_phi_old[i_U_P]
+        is_left_boundary = i % ns_x_mesh_nx == 0
+        is_right_boundary = (i + 1) % ns_x_mesh_nx == 0
+        is_bottom_boundary = j % ns_x_mesh_ny == 0
+        is_top_boundary = (j + 1) % ns_x_mesh_ny == 0
 
         # Unknowns
         U_P = U[i_U_P]
@@ -204,28 +217,28 @@ def residual_function(np.ndarray X, graph):
         residual[ii] = transient_term + advective_term - difusive_term - source_term
         is_residual_calculated[ii] = True
 
-    for i in range(len(ns_y_mesh)):
-        j = i // ns_y_mesh.nx
+    for i in range(ns_y_mesh_len):
+        j = i // ns_y_mesh_nx
 
         # Index conversion
         i_V_P = i
         i_V_W = i - 1
         i_V_E = i + 1
-        i_V_N = i + ns_y_mesh.nx
-        i_V_S = i - ns_y_mesh.nx
-        i_P_n = i + ns_y_mesh.nx
+        i_V_N = i + ns_y_mesh_nx
+        i_V_S = i - ns_y_mesh_nx
+        i_P_n = i + ns_y_mesh_nx
         i_P_s = i
         i_U_SE = i - j
         i_U_SW = i_U_SE - 1
-        i_U_NE = i_U_SE + ns_x_mesh.nx
-        i_U_NW = i_U_SW + ns_x_mesh.nx
+        i_U_NE = i_U_SE + ns_x_mesh_nx
+        i_U_NW = i_U_SW + ns_x_mesh_nx
 
         # Knowns
-        V_P_old = ns_y_mesh.phi_old[i_V_P]
-        is_left_boundary = i % ns_y_mesh.nx == 0
-        is_right_boundary = (i + 1) % ns_y_mesh.nx == 0
-        is_bottom_boundary = j % ns_y_mesh.ny == 0
-        is_top_boundary = (j + 1) % ns_y_mesh.ny == 0
+        V_P_old = ns_y_mesh_phi_old[i_V_P]
+        is_left_boundary = i % ns_y_mesh_nx == 0
+        is_right_boundary = (i + 1) % ns_y_mesh_nx == 0
+        is_bottom_boundary = j % ns_y_mesh_ny == 0
+        is_top_boundary = (j + 1) % ns_y_mesh_ny == 0
 
         # Unknowns
         V_P = V[i_V_P]
@@ -280,3 +293,28 @@ def residual_function(np.ndarray X, graph):
             residual[ii] = X[ii]
 
     return residual
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def residual_function(np.ndarray X, graph):
+    return c_residual_function(
+        X,
+        graph.dt,
+        graph.dx,
+        graph.dy,
+        graph.rho,
+        graph.mi,
+        graph.bc,
+        len(graph.pressure_mesh),
+        graph.pressure_mesh.nx,
+        graph.pressure_mesh.ny,
+        len(graph.ns_x_mesh),
+        graph.ns_x_mesh.nx,
+        graph.ns_x_mesh.ny,
+        len(graph.ns_y_mesh),
+        graph.ns_y_mesh.nx,
+        graph.ns_y_mesh.ny,
+        graph.ns_x_mesh.phi_old,
+        graph.ns_y_mesh.phi_old,
+    )
