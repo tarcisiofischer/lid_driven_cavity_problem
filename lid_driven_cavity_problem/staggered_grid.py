@@ -30,6 +30,7 @@ class Graph(object):
         'ns_x_mesh',
         'ns_y_mesh',
         'bc',
+        'use_cds',
     )
 
     def __init__(self, size_x, size_y, nx, ny, dt, rho, mi, bc, initial_P=1.0, initial_U=1.0, initial_V=1.0):
@@ -39,6 +40,7 @@ class Graph(object):
         self.rho = rho
         self.mi = mi
         self.bc = bc
+        self.use_cds = False
 
         self.pressure_mesh = Mesh2d(nx, ny, initial_P)
         self.ns_x_mesh = Mesh2d(nx - 1, ny, initial_U)

@@ -16,7 +16,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
 SOLVER_TYPE = 'petsc'
-LANGUAGE = 'c++'
+LANGUAGE = 'numba'
 
 if SOLVER_TYPE == 'petsc':
     solver = petsc_solver_wrapper.solve
@@ -43,13 +43,13 @@ else:
 
 size_x = 1.0
 size_y = 1.0
-nx = 80
-ny = 80
+nx = 180
+ny = 180
 dt = 1e-2
 rho = 1.0
 final_time = None  # Run until steady state
 mi = 1.0
-Re = 10.0
+Re = 400.0
 U_bc = (mi * Re) / (rho * size_x)
 print("Run Parameters:")
 print("size_x = %s" % (size_x,))
@@ -94,28 +94,16 @@ V = np.array(result.ns_y_mesh.phi)
 U = U.reshape(nx, ny - 1)
 V = V.reshape(nx - 1, ny)
 
-pos_ghia = np.loadtxt('ghia_ghia_shin_results/pos.txt')
 U_ghia = np.loadtxt('ghia_ghia_shin_results/U.txt')
 V_ghia = np.loadtxt('ghia_ghia_shin_results/V.txt')
-if np.isclose(Re, 0.01):
-    U_ghia = U_ghia[:, 0]
-    V_ghia = V_ghia[:, 0]
-elif np.isclose(Re, 10.0):
+pos_U_ghia = U_ghia[:, 0]
+pos_V_ghia = V_ghia[:, 0]
+if np.isclose(Re, 100.0):
     U_ghia = U_ghia[:, 1]
     V_ghia = V_ghia[:, 1]
-elif np.isclose(Re, 100.0):
+elif np.isclose(Re, 400.0):
     U_ghia = U_ghia[:, 2]
     V_ghia = V_ghia[:, 2]
-elif np.isclose(Re, 400.0):
-    U_ghia = U_ghia[:, 3]
-    V_ghia = V_ghia[:, 3]
-elif np.isclose(Re, 1000.0):
-    U_ghia = U_ghia[:, 4]
-    V_ghia = V_ghia[:, 4]
-else:
-    print("Re=%s" % (Re,))
-    U_ghia = None
-    V_ghia = None
 
 plt.figure(3)
 plt.title("U velocity in the mesh center-x")
@@ -123,7 +111,7 @@ U_normalized = U / U_bc
 U_center = U_normalized[:, len(U) // 2]
 plt.plot(U_center, np.linspace(0.0, size_y, len(U_center)))
 if U_ghia is not None:
-    plt.plot(U_ghia, pos_ghia, 'xb')
+    plt.plot(U_ghia, pos_U_ghia, 'xb')
 
 plt.figure(4)
 plt.title("V velocity in the mesh center-y")
@@ -131,6 +119,6 @@ V_normalized = V / U_bc
 V_center = V_normalized[len(V) // 2, :]
 plt.plot(np.linspace(0.0, size_x, len(V_center)), V_center)
 if V_ghia is not None:
-    plt.plot(pos_ghia, V_ghia, 'xb')
+    plt.plot(pos_V_ghia, V_ghia, 'xb')
 
 plt.show()

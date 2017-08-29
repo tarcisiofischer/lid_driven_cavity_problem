@@ -25,7 +25,8 @@ import numba
     float64[:],
     float64[:],
     float64[:],
-    boolean[:]
+    boolean[:],
+    boolean
 ), nopython=True, nogil=True, parallel=True)
 def _residual_function_helper(
     pressure_mesh_len,
@@ -51,6 +52,7 @@ def _residual_function_helper(
     P,
     residual,
     is_residual_calculated,
+    use_cds=False,
 ):
     for i in numba.prange(pressure_mesh_len):
         j = i // pressure_mesh_nx
@@ -123,10 +125,16 @@ def _residual_function_helper(
         U_w = (U_P + U_W) / 2.0
         V_n = (V_NE + V_NW) / 2.0
         V_s = (V_SE + V_SW) / 2.0
-        beta_U_e = 0.5 if U_e > 0.0 else -0.5
-        beta_U_w = 0.5 if U_w > 0.0 else -0.5
-        beta_V_n = 0.5 if V_n > 0.0 else -0.5
-        beta_V_s = 0.5 if V_s > 0.0 else -0.5
+        if use_cds:
+            beta_U_e = 0.0
+            beta_U_w = 0.0
+            beta_V_n = 0.0
+            beta_V_s = 0.0
+        else:
+            beta_U_e = 0.5 if U_e > 0.0 else -0.5
+            beta_U_w = 0.5 if U_w > 0.0 else -0.5
+            beta_V_n = 0.5 if V_n > 0.0 else -0.5
+            beta_V_s = 0.5 if V_s > 0.0 else -0.5
 
         # Navier Stokes X
         transient_term = (rho * U_P - rho * U_P_old) * (dx * dy / dt)
@@ -191,10 +199,16 @@ def _residual_function_helper(
         U_w = (U_NW + U_SW) / 2.0
         V_n = (V_P + V_N) / 2.0
         V_s = (V_S + V_P) / 2.0
-        beta_U_e = 0.5 if U_e > 0.0 else -0.5
-        beta_U_w = 0.5 if U_w > 0.0 else -0.5
-        beta_V_n = 0.5 if V_n > 0.0 else -0.5
-        beta_V_s = 0.5 if V_s > 0.0 else -0.5
+        if use_cds:
+            beta_U_e = 0.0
+            beta_U_w = 0.0
+            beta_V_n = 0.0
+            beta_V_s = 0.0
+        else:
+            beta_U_e = 0.5 if U_e > 0.0 else -0.5
+            beta_U_w = 0.5 if U_w > 0.0 else -0.5
+            beta_V_n = 0.5 if V_n > 0.0 else -0.5
+            beta_V_s = 0.5 if V_s > 0.0 else -0.5
 
         # Navier Stokes Y
         transient_term = (rho * V_P - rho * V_P_old) * (dx * dy / dt)
@@ -230,6 +244,7 @@ def residual_function(X, graph):
     ns_y_mesh = graph.ns_y_mesh
     residual = np.zeros(shape=(len(X,)))
     is_residual_calculated = np.zeros(shape=(len(X,)), dtype=bool)
+    use_cds = graph.use_cds
 
     # Knowns (Constants)
     dt = graph.dt
@@ -277,6 +292,7 @@ def residual_function(X, graph):
         P,
         residual,
         is_residual_calculated,
+        use_cds,
     )
 
     return residual
