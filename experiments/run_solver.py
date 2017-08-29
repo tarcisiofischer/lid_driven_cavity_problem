@@ -16,7 +16,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
 SOLVER_TYPE = 'petsc'
-LANGUAGE = 'numba'
+LANGUAGE = 'c++_omp'
 
 if SOLVER_TYPE == 'petsc':
     solver = petsc_solver_wrapper.solve
@@ -35,6 +35,9 @@ elif LANGUAGE == 'cython':
 elif LANGUAGE == 'c++':
     from lid_driven_cavity_problem.residual_function import cpp_residual_function
     residual_f = cpp_residual_function.residual_function
+elif LANGUAGE == 'c++_omp':
+    from lid_driven_cavity_problem.residual_function import cpp_omp_residual_function
+    residual_f = cpp_omp_residual_function.residual_function
 elif LANGUAGE == 'numba':
     residual_f = numba_residual_function.residual_function
 else:

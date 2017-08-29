@@ -11,3 +11,5 @@ dependencies:
   - cython
   - pybind11
   - numba
+  - openmp
+
