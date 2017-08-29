@@ -1,7 +1,10 @@
+import cython
+
 import numpy as np
+
+
 cimport numpy as np
 from libcpp cimport bool
-import cython
 
 
 ctypedef unsigned char uint8_t
@@ -16,15 +19,15 @@ cdef c_residual_function(
     double rho,
     double mi,
     double bc,  # Velocity at the top (U_top)
-    int pressure_mesh_len,
-    int pressure_mesh_nx,
-    int pressure_mesh_ny,
-    int ns_x_mesh_len,
-    int ns_x_mesh_nx,
-    int ns_x_mesh_ny,
-    int ns_y_mesh_len,
-    int ns_y_mesh_nx,
-    int ns_y_mesh_ny,
+    long pressure_mesh_len,
+    long pressure_mesh_nx,
+    long pressure_mesh_ny,
+    long ns_x_mesh_len,
+    long ns_x_mesh_nx,
+    long ns_x_mesh_ny,
+    long ns_y_mesh_len,
+    long ns_y_mesh_nx,
+    long ns_y_mesh_ny,
     np.ndarray[double] ns_x_mesh_phi_old,
     np.ndarray[double] ns_y_mesh_phi_old,
     ):
@@ -38,7 +41,7 @@ cdef c_residual_function(
     cdef np.ndarray[double, ndim=1] extended_U = X[1::3]
     nx = ns_x_mesh_nx
     ny = ns_x_mesh_ny
-    cdef np.ndarray[int, ndim=1, mode='c'] U_idxs = np.arange(0, ns_x_mesh_len) + np.repeat(np.arange(0, ny), nx)
+    cdef np.ndarray[long, ndim=1, mode='c'] U_idxs = np.arange(0, ns_x_mesh_len) + np.repeat(np.arange(0, ny), nx)
     cdef np.ndarray[double, ndim=1] U = extended_U[U_idxs]
     cdef np.ndarray[double, ndim=1] V = X[2::3][0:ns_y_mesh_len]
 
