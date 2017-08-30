@@ -143,6 +143,11 @@ class _PetscSolverWrapper(object):
             logger.info('  %s Residual function norm %s' % (its, fnorm,))
         snes.setMonitor(_solver_monitor)
 
+        def _linear_solver_monitor(snes, its, fnorm):
+            if its % 50 == 0:
+                logger.info('[Linear Solver] %s Residual function norm %s' % (its, fnorm,))
+        snes.ksp.setMonitor(_linear_solver_monitor)
+
         snes.setTolerances(rtol=1e-4, atol=1e-4, stol=1e-4, max_it=50)
         snes.solve(b, x)
 
