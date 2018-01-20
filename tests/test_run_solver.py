@@ -9,10 +9,14 @@ import numpy as np
 
 GENERATE = False
 
+def get_petsc_solver_wrapper():
+    wrapper = petsc_solver_wrapper.PetscSolverWrapper()
+    return wrapper.solve
+
 @pytest.mark.parametrize(
     ("solver_function"),
     (
-        petsc_solver_wrapper.solve,
+        get_petsc_solver_wrapper(),
         scipy_solver_wrapper.solve,
     )
 )

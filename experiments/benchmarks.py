@@ -12,7 +12,8 @@ N_RUNS = 5
 
 def run_solver_and_measure_time(solver_type='petsc', language='c++', grid_size=32, Re=400.0):
     if solver_type == 'petsc':
-        solver = petsc_solver_wrapper._PetscSolverWrapper()
+        wrapper = petsc_solver_wrapper.PetscSolverWrapper()
+        solver = wrapper.solve
     elif solver_type == 'scipy':
         solver = scipy_solver_wrapper.solve
     else:

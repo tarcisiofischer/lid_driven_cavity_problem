@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1e-6, adaptative_dt=True):
     if solver is None:
-        solver = petsc_solver_wrapper.solve
+        wrapper = petsc_solver_wrapper.PetscSolverWrapper()
+        solver = wrapper.solve
     if residual_f is None:
         residual_f = numpy_residual_function.residual_function
 

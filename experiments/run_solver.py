@@ -19,7 +19,8 @@ SOLVER_TYPE = 'petsc'
 LANGUAGE = 'c++_omp'
 
 if SOLVER_TYPE == 'petsc':
-    solver = petsc_solver_wrapper.solve
+    wrapper = petsc_solver_wrapper.PetscSolverWrapper()
+    solver = wrapper.solve
 elif SOLVER_TYPE == 'scipy':
     solver = scipy_solver_wrapper.solve
 else:

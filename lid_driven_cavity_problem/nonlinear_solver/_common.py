@@ -1,6 +1,3 @@
-from scipy.optimize.slsqp import approx_jacobian
-
-from lid_driven_cavity_problem import residual_function
 import numpy as np
 
 

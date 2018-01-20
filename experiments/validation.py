@@ -21,7 +21,8 @@ U_bc = (mi * Re) / (rho * size_x)
 
 
 def run_solver_and_return_results(language, interpolation_type):
-    solver = petsc_solver_wrapper._PetscSolverWrapper()
+    wrapper = petsc_solver_wrapper.PetscSolverWrapper()
+    solver = wrapper.solve
 
     if language == 'python':
         residual_f = pure_python_residual_function.residual_function
