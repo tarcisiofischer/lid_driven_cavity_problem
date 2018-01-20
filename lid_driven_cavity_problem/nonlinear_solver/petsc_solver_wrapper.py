@@ -34,10 +34,9 @@ logger = logging.getLogger(__name__)
 
 class PetscSolverWrapper:
     def __init__(self, residual_f):
-        # Cache for the PETSC Jacobian object
-        self._petsc_jacobian = None
         self._active_graph = None
         self._residual_f = residual_f
+        self._first_run = True
         self._setup_options()
 
     def residual_function_for_petsc(self, snes, x, f):
@@ -69,30 +68,8 @@ class PetscSolverWrapper:
             _plot_jacobian(self._active_graph, X)
             assert False, "Finished plotting Jacobian matrix. Program will be terminated (This is expected behavior)"
 
-        if self._petsc_jacobian is None:
-            # Creates the Jacobian matrix structure.
-            j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
-            logger.info("Jacobian NNZ=%s" % (j_structure.nnz,))
-            csr = (j_structure.indptr, j_structure.indices, j_structure.data)
-            self._petsc_jacobian = PETSc.Mat().createAIJWithArrays(j_structure.shape, csr)
-            self._petsc_jacobian.assemble(assembly=self._petsc_jacobian.AssemblyType.FINAL_ASSEMBLY)
-
-        self._comm = PETSc.COMM_WORLD
-        self._dm = PETSc.DMShell().create(comm=self._comm)
-        self._dm.setMatrix(self._petsc_jacobian)
-
-        # residual vector
-        self._r = PETSc.Vec().createSeq(N)
-
-        self._snes = PETSc.SNES().create(comm=self._comm)
-        self._snes.setFunction(self.residual_function_for_petsc, self._r)
-        self._snes.setDM(self._dm)
-        self._snes.setConvergenceHistory()
-        self._snes.setFromOptions()
-        self._snes.setUseFD(True)
-        self._snes.setMonitor(self._solver_monitor)
-        self._snes.ksp.setMonitor(self._linear_solver_monitor)
-        self._snes.setTolerances(rtol=1e-4, atol=1e-4, stol=1e-4, max_it=50)
+        if self._first_run:
+            self._setup_snes(pressure_mesh, N)
 
         logger.info("Initial guess = %s" % (X,))
         x = PETSc.Vec().createSeq(N)  # solution vector
@@ -130,6 +107,31 @@ class PetscSolverWrapper:
     def _linear_solver_monitor(self, snes, its, fnorm):
         if its % 50 == 0:
             logger.info('[Linear Solver] %s Residual function norm %s' % (its, fnorm,))
+
+    def _setup_snes(self, pressure_mesh, residual_size):
+        # Creates the Jacobian matrix structure.
+        j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
+        logger.info("Jacobian NNZ=%s" % (j_structure.nnz,))
+        csr = (j_structure.indptr, j_structure.indices, j_structure.data)
+        self._petsc_jacobian = PETSc.Mat().createAIJWithArrays(j_structure.shape, csr)
+        self._petsc_jacobian.assemble(assembly=self._petsc_jacobian.AssemblyType.FINAL_ASSEMBLY)
+
+        self._comm = PETSc.COMM_WORLD
+        self._dm = PETSc.DMShell().create(comm=self._comm)
+        self._dm.setMatrix(self._petsc_jacobian)
+
+        # residual vector
+        self._r = PETSc.Vec().createSeq(residual_size)
+
+        self._snes = PETSc.SNES().create(comm=self._comm)
+        self._snes.setFunction(self.residual_function_for_petsc, self._r)
+        self._snes.setDM(self._dm)
+        self._snes.setConvergenceHistory()
+        self._snes.setFromOptions()
+        self._snes.setUseFD(True)
+        self._snes.setMonitor(self._solver_monitor)
+        self._snes.ksp.setMonitor(self._linear_solver_monitor)
+        self._snes.setTolerances(rtol=1e-4, atol=1e-4, stol=1e-4, max_it=50)
 
     def _setup_options(self):
         options = PETSc.Options()
