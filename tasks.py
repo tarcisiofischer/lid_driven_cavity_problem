@@ -24,3 +24,8 @@ def cdt(ctx, build_type='Debug', target='../lid_driven_cavity_problem_cdt'):
         'cmake %s -G"Eclipse CDT4 - Unix Makefiles" -DCMAKE_BUILD_TYPE=%s' % (current_dir, build_type,),
     ]
     ctx.run(' && '.join(commands))
+
+
+@task
+def test(ctx):
+    ctx.run('py.test')
