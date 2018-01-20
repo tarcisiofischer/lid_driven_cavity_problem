@@ -1,7 +1,9 @@
 name: lid_driven_cavity_problem
+
 channels:
   - esss
   - defaults
+
 dependencies:
   - python==3.5.3
   - pytest
@@ -14,3 +16,8 @@ dependencies:
   - openmp
   - cmake==3.9.1
   - invoke==0.21.0
+
+environment:
+  PYTHONPATH:
+    - {{ root }}/lid_driven_cavity_problem/
+    - {{ root }}/c++/artifacts/
