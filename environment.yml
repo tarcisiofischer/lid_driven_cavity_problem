@@ -12,4 +12,5 @@ dependencies:
   - pybind11
   - numba
   - openmp
-
+  - cmake==3.9.1
+  - invoke==0.21.0

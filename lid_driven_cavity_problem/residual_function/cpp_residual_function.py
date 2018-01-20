@@ -1,9 +1,7 @@
 try:
     import _residual_function
 except ImportError:
-    raise RuntimeError("C++ module is not compiled. Compile it by running command:\n \
-    make\n \
-    In the c++/ directory.")
+    raise RuntimeError("C++ module is not compiled.")
 
 
 # Forward to C++ implementation
