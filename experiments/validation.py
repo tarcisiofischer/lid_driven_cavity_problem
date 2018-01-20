@@ -1,4 +1,4 @@
-from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper
+from lid_driven_cavity_problem.nonlinear_solver import solver_builder
 from lid_driven_cavity_problem.residual_function import pure_python_residual_function, \
     numpy_residual_function, cython_residual_function, numba_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
@@ -21,9 +21,6 @@ U_bc = (mi * Re) / (rho * size_x)
 
 
 def run_solver_and_return_results(language, interpolation_type):
-    wrapper = petsc_solver_wrapper.PetscSolverWrapper()
-    solver = wrapper.solve
-
     if language == 'python':
         residual_f = pure_python_residual_function.residual_function
     elif language == 'numpy':
@@ -37,6 +34,8 @@ def run_solver_and_return_results(language, interpolation_type):
         residual_f = numba_residual_function.residual_function
     else:
         assert False
+
+    solver = solver_builder.build(solver_builder.PETSC_SOLVER, residual_f)
 
     graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
     if interpolation_type == 'cds':

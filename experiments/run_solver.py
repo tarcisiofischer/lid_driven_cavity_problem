@@ -2,7 +2,7 @@ import logging
 import sys
 import time
 
-from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
+from lid_driven_cavity_problem.nonlinear_solver import solver_builder
 from lid_driven_cavity_problem.residual_function import numpy_residual_function, \
     pure_python_residual_function, numba_residual_function, \
     cython_residual_function
@@ -15,35 +15,29 @@ import numpy as np
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 PLOT_RESULTS = True
-SOLVER_TYPE = 'petsc'
-LANGUAGE = 'c++_omp'
 
-if SOLVER_TYPE == 'petsc':
-    wrapper = petsc_solver_wrapper.PetscSolverWrapper()
-    solver = wrapper.solve
-elif SOLVER_TYPE == 'scipy':
-    solver = scipy_solver_wrapper.solve
-else:
-    print("WARNING: Unknown solver type %s. Will use default solver." % (SOLVER_TYPE,))
-    solver = None
+solver_name = solver_builder.PETSC_SOLVER
+language = 'c++_omp'
 
-if LANGUAGE == 'python':
+if language == 'python':
     residual_f = pure_python_residual_function.residual_function
-elif LANGUAGE == 'numpy':
+elif language == 'numpy':
     residual_f = numpy_residual_function.residual_function
-elif LANGUAGE == 'cython':
+elif language == 'cython':
     residual_f = cython_residual_function.residual_function
-elif LANGUAGE == 'c++':
+elif language == 'c++':
     from lid_driven_cavity_problem.residual_function import cpp_residual_function
     residual_f = cpp_residual_function.residual_function
-elif LANGUAGE == 'c++_omp':
+elif language == 'c++_omp':
     from lid_driven_cavity_problem.residual_function import cpp_omp_residual_function
     residual_f = cpp_omp_residual_function.residual_function
-elif LANGUAGE == 'numba':
+elif language == 'numba':
     residual_f = numba_residual_function.residual_function
 else:
     print("WARNING: Unknown residual function %s. Will use default." % (SOLVER_TYPE,))
     solver = None
+
+solver = solver_builder.build(solver_name, residual_f)
 
 size_x = 1.0
 size_y = 1.0
@@ -69,7 +63,7 @@ print("")
 
 graph = Graph(size_x, size_y, nx, ny, dt, rho, mi, U_bc)
 b = time.time()
-result = run_simulation(graph, final_time, solver, residual_f)
+result = run_simulation(graph, final_time, solver)
 print(time.time() - b)
 
 U = np.array(result.ns_x_mesh.phi)

@@ -32,22 +32,23 @@ PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS = {
 
 logger = logging.getLogger(__name__)
 
-class PetscSolverWrapper(object):
-    def __init__(self):
+class PetscSolverWrapper:
+    def __init__(self, residual_f):
         # Cache for the PETSC Jacobian object
         self._petsc_jacobian = None
         self._active_graph = None
+        self._residual_f = residual_f
         self._setup_options()
 
-    def residual_function_for_petsc(self, snes, x, f, residual_f):
+    def residual_function_for_petsc(self, snes, x, f):
         '''
         Wrapper over our `residual_f` so that it's in a way expected by PETSc.
         '''
         x = x[:]  # transforms `PETSc.Vec` into `numpy.ndarray`
-        f[:] = residual_f(x, self._active_graph)
+        f[:] = self._residual_f(x, self._active_graph)
         f.assemble()
 
-    def solve(self, graph, residual_f):
+    def solve(self, graph):
         assert self._active_graph is None
 
         self._active_graph = deepcopy(graph)
@@ -82,10 +83,9 @@ class PetscSolverWrapper(object):
 
         # residual vector
         self._r = PETSc.Vec().createSeq(N)
-        context = (residual_f, )
 
         self._snes = PETSc.SNES().create(comm=self._comm)
-        self._snes.setFunction(self.residual_function_for_petsc, self._r, context)
+        self._snes.setFunction(self.residual_function_for_petsc, self._r)
         self._snes.setDM(self._dm)
         self._snes.setConvergenceHistory()
         self._snes.setFromOptions()

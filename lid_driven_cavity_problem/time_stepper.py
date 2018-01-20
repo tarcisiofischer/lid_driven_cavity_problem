@@ -2,17 +2,14 @@ import logging
 
 from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
-from lid_driven_cavity_problem.residual_function import numpy_residual_function
 
 
 logger = logging.getLogger(__name__)
 
-def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1e-6, adaptative_dt=True):
+def run_simulation(graph, final_time, solver=None, minimum_dt=1e-6, adaptative_dt=True):
     if solver is None:
         wrapper = petsc_solver_wrapper.PetscSolverWrapper()
         solver = wrapper.solve
-    if residual_f is None:
-        residual_f = numpy_residual_function.residual_function
 
     t = 0.0
     while final_time is None or t < final_time:
@@ -22,7 +19,7 @@ def run_simulation(graph, final_time, solver=None, residual_f=None, minimum_dt=1
 
         logger.info("time: %s/%s" % (t, final_time))
         try:
-            new_graph = solver(graph, residual_f)
+            new_graph = solver(graph)
         except SolverDivergedException:
             logger.info('Simulation diverged.')
             if adaptative_dt:

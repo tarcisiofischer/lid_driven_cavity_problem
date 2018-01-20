@@ -1,6 +1,6 @@
 import time
 
-from lid_driven_cavity_problem.nonlinear_solver import petsc_solver_wrapper, scipy_solver_wrapper
+from lid_driven_cavity_problem.nonlinear_solver import solver_builder
 from lid_driven_cavity_problem.residual_function import pure_python_residual_function, \
     numpy_residual_function, cython_residual_function, numba_residual_function
 from lid_driven_cavity_problem.staggered_grid import Graph
@@ -10,15 +10,12 @@ import numpy as np
 
 N_RUNS = 5
 
-def run_solver_and_measure_time(solver_type='petsc', language='c++', grid_size=32, Re=400.0):
-    if solver_type == 'petsc':
-        wrapper = petsc_solver_wrapper.PetscSolverWrapper()
-        solver = wrapper.solve
-    elif solver_type == 'scipy':
-        solver = scipy_solver_wrapper.solve
-    else:
-        assert False
-
+def run_solver_and_measure_time(
+    solver_name=solver_builder.PETSC_SOLVER,
+    language='c++',
+    grid_size=32,
+    Re=400.0
+):
     if language == 'python':
         residual_f = pure_python_residual_function.residual_function
     elif language == 'numpy':
@@ -32,6 +29,8 @@ def run_solver_and_measure_time(solver_type='petsc', language='c++', grid_size=3
         residual_f = numba_residual_function.residual_function
     else:
         assert False
+
+    solver = solver_builder.build(solver_name, residual_f)
 
     size_x = 1.0
     size_y = 1.0
@@ -48,7 +47,7 @@ def run_solver_and_measure_time(solver_type='petsc', language='c++', grid_size=3
     for i in range(N_RUNS):
         print("Run %s/%s" % (i + 1, N_RUNS,))
         start = time.time()
-        g = run_simulation(graph, final_time, solver, residual_f)
+        g = run_simulation(graph, final_time, solver)
         stop = time.time()
         runs.append(stop - start)
 
