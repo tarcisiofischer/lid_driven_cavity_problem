@@ -89,6 +89,7 @@ class PetscSolverWrapper:
 
         if not IGNORE_DIVERGED:
             if self._snes.reason <= 0:
+                self._active_graph = None
                 raise SolverDivergedException()
 
         U, V, P = _recover_X(x, self._active_graph)
