@@ -5,12 +5,15 @@
 
 class SolverHelper {
 public:
-	SolverHelper();
 	~SolverHelper();
 	void setup_options();
+	void setup_snes(int nx, int ny);
 
 private:
-	PetscOptions *options;
+	PetscOptions _options;
+	SNES _snes;
+	DM _dm;
+	Vec _residual;
 };
 
 #endif /* C___PETSC_SOLVER_HELPERS_HPP_ */

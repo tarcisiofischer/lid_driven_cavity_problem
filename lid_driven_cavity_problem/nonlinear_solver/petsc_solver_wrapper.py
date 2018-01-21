@@ -7,6 +7,7 @@ from lid_driven_cavity_problem.nonlinear_solver._common import _create_X, _recov
     _calculate_jacobian_mask
 from lid_driven_cavity_problem.nonlinear_solver.exceptions import SolverDivergedException
 from lid_driven_cavity_problem.options import PLOT_JACOBIAN, SHOW_SOLVER_DETAILS, IGNORE_DIVERGED
+import _petsc_helpers
 
 
 PETSC_NONLINEAR_SOLVER_CONVERGENCE_REASONS = {
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 class PetscSolverWrapper:
     def __init__(self, residual_f):
+        self._cpp = _petsc_helpers.SolverHelper()
         self._active_graph = None
         self._residual_f = residual_f
         self._first_run = True
@@ -69,7 +71,7 @@ class PetscSolverWrapper:
             assert False, "Finished plotting Jacobian matrix. Program will be terminated (This is expected behavior)"
 
         if self._first_run:
-            self._setup_snes(pressure_mesh, N)
+            self._setup_snes(pressure_mesh.nx, pressure_mesh.ny)
 
         logger.info("Initial guess = %s" % (X,))
         x = PETSc.Vec().createSeq(N)  # solution vector
@@ -109,9 +111,11 @@ class PetscSolverWrapper:
         if its % 50 == 0:
             logger.info('[Linear Solver] %s Residual function norm %s' % (its, fnorm,))
 
-    def _setup_snes(self, pressure_mesh, residual_size):
+    def _setup_snes(self, nx, ny):
+        N = nx * ny * 3
+
         # Creates the Jacobian matrix structure.
-        j_structure = _calculate_jacobian_mask(pressure_mesh.nx, pressure_mesh.ny, 3)
+        j_structure = _calculate_jacobian_mask(nx, ny, 3)
         logger.info("Jacobian NNZ=%s" % (j_structure.nnz,))
         csr = (j_structure.indptr, j_structure.indices, j_structure.data)
         self._petsc_jacobian = PETSc.Mat().createAIJWithArrays(j_structure.shape, csr)
@@ -122,7 +126,7 @@ class PetscSolverWrapper:
         self._dm.setMatrix(self._petsc_jacobian)
 
         # residual vector
-        self._r = PETSc.Vec().createSeq(residual_size)
+        self._r = PETSc.Vec().createSeq(N)
 
         self._snes = PETSc.SNES().create(comm=self._comm)
         self._snes.setFunction(self.residual_function_for_petsc, self._r)
