@@ -9,6 +9,7 @@ dependencies:
   - pytest
   - scipy
   - matplotlib
+  - petsc
   - petsc4py
   - cython
   - pybind11

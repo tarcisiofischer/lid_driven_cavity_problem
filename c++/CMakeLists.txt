@@ -1,5 +1,6 @@
 find_package(pybind11 REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(PETSc REQUIRED)
 
 add_library(
     residual_function
@@ -9,10 +10,15 @@ add_library(
         _residual_function.cpp
 )
 
+include_directories(
+    ${PETSc_INCLUDE_DIRS}
+)
+
 target_link_libraries(
 	residual_function
 	PRIVATE
 		pybind11::pybind11
+		${PETSc_LIBRARY}
 )
 
 set(
